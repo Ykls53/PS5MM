@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160">
+  <!-- PS5MM's home screen background (pic0/pic1), turned into BC7 DDS by
+       scripts/build-app.sh. The master artwork is generated procedurally on the
+       workstation (gen_artwork.py: gradients, masks, grain) and written to
+       source/background.png; this SVG is the same composition in vectors, so
+       scripts/render-artwork.sh still produces something faithful.
+
+       The wordmark block sits bottom-RIGHT on purpose: the console's own UI
+       covers the bottom-left of the screen. -->
+  <defs>
+    <pattern id="grid" width="240" height="240" patternUnits="userSpaceOnUse">
+      <path d="M240 0H0V240" fill="none" stroke="#f2f1ec" stroke-opacity="0.035" stroke-width="2"/>
+    </pattern>
+    <linearGradient id="gText" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b7cff" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#5b7cff" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="gPicture" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a78bfa" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#a78bfa" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="gSpeech" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2dd4bf" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#2dd4bf" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="gVideo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e4539e" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#e4539e" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="gReserved" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6a6a66" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#6a6a66" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="3840" height="2160" fill="#0e0e11"/>
+  <rect width="3840" height="2160" fill="url(#grid)"/>
+
+  <!-- five light pillars, one per engine slot; square foot on the baseline at
+       y=1560, rounded crown, dissolving upward -->
+  <g>
+    <path d="M1040,1560 V650 A110,110 0 0 1 1150,540 A110,110 0 0 1 1260,650 V1560 Z" fill="url(#gText)"/>
+    <path d="M1428,1560 V1109 A110,110 0 0 1 1538,999 A110,110 0 0 1 1648,1109 V1560 Z" fill="url(#gPicture)"/>
+    <path d="M1816,1560 V823 A110,110 0 0 1 1926,713 A110,110 0 0 1 2036,823 V1560 Z" fill="url(#gSpeech)"/>
+    <path d="M2204,1560 V1109 A110,110 0 0 1 2314,999 A110,110 0 0 1 2424,1109 V1560 Z" fill="url(#gVideo)"/>
+    <path d="M2592,1560 V650 A110,110 0 0 1 2702,540 A110,110 0 0 1 2812,650 V1560 Z" fill="url(#gReserved)"/>
+  </g>
+
+  <!-- the baseline, lit where a pillar stands -->
+  <line x1="0" y1="1560" x2="3840" y2="1560" stroke="#2a2a33" stroke-width="3"/>
+  <g stroke-width="4">
+    <line x1="984"  y1="1560" x2="1316" y2="1560" stroke="#5b7cff"/>
+    <line x1="1372" y1="1560" x2="1704" y2="1560" stroke="#a78bfa"/>
+    <line x1="1760" y1="1560" x2="2092" y2="1560" stroke="#2dd4bf"/>
+    <line x1="2148" y1="1560" x2="2480" y2="1560" stroke="#e4539e"/>
+    <line x1="2536" y1="1560" x2="2868" y2="1560" stroke="#6a6a66"/>
+  </g>
+
+  <!-- brand lockup, bottom-right: the five-stroke mark at the wordmark's right
+       end, echoing the last pillar; everything right-aligned to x=3640 -->
+  <g>
+    <rect x="3490"   y="1566" width="15.7" height="112"  rx="7.8" fill="#5b7cff"/>
+    <rect x="3523.6" y="1616" width="15.7" height="61.6" rx="7.8" fill="#a78bfa"/>
+    <rect x="3557.2" y="1585" width="15.7" height="93"   rx="7.8" fill="#2dd4bf"/>
+    <rect x="3590.8" y="1616" width="15.7" height="61.6" rx="7.8" fill="#e4539e"/>
+    <rect x="3624.4" y="1566" width="15.7" height="112"  rx="7.8" fill="#6a6a66"/>
+  </g>
+  <text x="3640" y="1960" text-anchor="end" font-family="PS5LM Mono" font-weight="800" font-size="292" fill="#f2f1ec" letter-spacing="-4">PS5MM</text>
+  <text x="3640" y="2054" text-anchor="end" font-family="PS5LM Mono" font-weight="400" font-size="56" fill="#a7a6a0">Local Multimodal AI Hub</text>
+</svg>

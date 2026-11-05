@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+// 引擎端口按启动顺序分配：第一个起的拿 8001，下一个 8002，一直到 8005。
+// 再往后没有内存放模型了 —— 这台机器的池子只够这么多。
+//
+// 放在头里，文字引擎（model_plan.cpp 拼 llama-server 的参数）和这里写的
+// 两个引擎用同一个计数器。
+
+#include <atomic>
+#include <cstdio>
+
+namespace ps5mm {
+
+constexpr int kPortFirst = 8001;
+constexpr int kPortLast  = 8005;
+
+inline std::atomic<int> & port_counter() {
+    static std::atomic<int> next{ kPortFirst };
+    return next;
+}
+
+inline std::atomic<int> & last_port() {
+    static std::atomic<int> last{ 0 };
+    return last;
+}
+
+inline int take_port() {
+    const int p = port_counter().fetch_add(1);
+    if (p > kPortLast) {
+        std::printf("ps5mm: no port left for another engine (8001-8005 already handed out)\n");
+        return kPortFirst;
+    }
+    last_port() = p;
+    return p;
+}
+
+// The port the text engine got, for the console page: it starts first, so 8001
+// unless an engine was started ahead of it.
+inline int text_port() {
+    return last_port().load() != 0 ? last_port().load() : kPortFirst;
+}
+
+}  // namespace ps5mm

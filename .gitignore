@@ -1,0 +1,10 @@
+build/
+.deps/
+third_party/llama.cpp/
+third_party/stable-diffusion.cpp/
+*.o
+*.a
+*.so
+*.bin
+*.gguf
+*.safetensors

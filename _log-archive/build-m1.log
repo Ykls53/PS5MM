@@ -1,0 +1,27 @@
+[0/2] Re-checking globbed directories...
+[1/9] Performing build step for 'vulkan-shaders-gen'
+ninja: no work to do.
+[2/9] Performing install step for 'vulkan-shaders-gen'
+-- Up-to-date: /home/yk/PS5MM/build/app-ps5/llama/Release/./vulkan-shaders-gen
+[3/9] Completed 'vulkan-shaders-gen'
+[4/9] Provisioning UI assets
+-- UI: downloading from b11608: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b11608/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from b11608 failed: "Timeout was reached"
+-- UI: downloading from latest: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/latest/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from latest failed: "Timeout was reached"
+-- UI: HF download failed
+CMake Warning at /home/yk/PS5MM/third_party/llama.cpp/scripts/ui-assets.cmake:584 (message):
+  UI: no assets available - building without an embedded UI.  In a
+  disconnected environment, download the pre-built UI from a llama.cpp
+  release at https://github.com/ggml-org/llama.cpp/releases and extract to
+  tools/ui/dist.
+
+
+-- UI: assets unchanged, skipping embedding
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/tools/radv-link.sh: line 20: /home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp: Permission denied
+mv: cannot stat '/home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp': No such file or directory
+wrote 101754496 bytes: /home/yk/PS5MM/build/app-ps5/eboot.elf
+sha256 5e9d04b25a71cd225f70fad31b953cf9ee8b3771e7606f0a281360c2d575f0e8
+wrote 100514536 bytes: /home/yk/PS5MM/build/app-ps5/title/PPSA99577/eboot.bin
+sha256 735c0144ee8fc1734bd7e6f5fef5e59fd2776dc4d1b5042d567b78bbf84261fb
+build-app: /home/yk/PS5MM/build/app-ps5/title/PPSA99577 (100514536 bytes)

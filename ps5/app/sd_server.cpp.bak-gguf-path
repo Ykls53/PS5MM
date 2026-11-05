@@ -1,0 +1,1070 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// PS5MM's picture engine: stable-diffusion.cpp, on its own ggml and Vulkan
+// backend, in the same process as the text and speech engines.
+//
+// Routes:
+//   POST /sdapi/v1/txt2img         A1111  -> { images: [base64 png] }
+//   POST /sdapi/v1/txt2vid         ours   -> AVI (MJPEG) on the wire
+//   POST /v1/images/generations    OpenAI -> { data: [{b64_json}] }
+//   POST /sdapi/v1/img2img         A1111  -> { images: [base64 png] }
+//   POST /sdapi/v1/inpaint         A1111  -> mask 白色处重绘
+//   GET  /health, /sdapi/v1/options
+//
+// The model loads on the first request, not at the start: Wan 2.2's three
+// pieces are 10 GB and the text and speech engines are already holding theirs.
+// One context, one model, one generation at a time.
+
+#include "sd_server.hpp"
+#include "adaptive.hpp"
+#include "media_server.hpp"
+#include "interp_server.hpp"
+
+#include "stable-diffusion.h"
+#include "ggml.h"
+
+// The JPEG/PNG encoder's implementation lives here; nothing else in the link
+// defines it (sd.cpp's examples do, and they are not built).
+// Both static: llama.cpp's mtmd carries its own stb_image, and a second global
+// copy of stbi_* is a duplicate symbol at link time. Static keeps these here.
+#define STB_IMAGE_STATIC
+#define STB_IMAGE_WRITE_STATIC
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image.h"
+#include "stb_image_write.h"
+
+#include "cpp-httplib/httplib.h"
+#include "nlohmann/json.hpp"
+
+#include <sys/stat.h>
+
+#include <atomic>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
+namespace {
+
+using json = nlohmann::json;
+
+struct Engine {
+    sd_ctx_t *      ctx     = nullptr;
+    upscaler_ctx_t * upscaler = nullptr;   // ESRGAN-class, loaded on demand too
+    bool            ready   = false;
+    SdModels        models{};
+    // SdModels 里是 const char *：指向调用方那份 Settings（界面上传进来的副本），
+    // 它在 sd_server_start 返回后就没了，而模型要到第一次请求才加载。所以这里自己
+    // 留一份字符串，让 models 里的指针只指向自己这份，绝不指向调用方的栈。
+    std::string     own[7];
+    void take_models(const SdModels & in) {
+        const char * src[7] = { in.diffusion, in.clip_l, in.clip_g, in.t5xxl, in.vae, in.esrgan, in.output_dir };
+        for (int i = 0; i < 7; ++i) {
+            own[i] = src[i] != nullptr ? src[i] : "";
+        }
+        models.diffusion  = src[0] != nullptr ? own[0].c_str() : nullptr;
+        models.clip_l     = src[1] != nullptr ? own[1].c_str() : nullptr;
+        models.clip_g     = src[2] != nullptr ? own[2].c_str() : nullptr;
+        models.t5xxl      = src[3] != nullptr ? own[3].c_str() : nullptr;
+        models.vae        = src[4] != nullptr ? own[4].c_str() : nullptr;
+        models.esrgan     = src[5] != nullptr ? own[5].c_str() : nullptr;
+        models.output_dir = src[6] != nullptr ? own[6].c_str() : nullptr;
+    }
+    std::mutex      mu;   // one generation at a time, and guards both
+    std::atomic<long> jobs{ 0 };
+    std::string     out_dir;
+    // 进度：sd.cpp 每走一步都回调一次，界面靠它显示「第 12 / 20 步」
+    std::atomic<int>  step{ 0 };
+    std::atomic<int>  steps{ 0 };
+    std::atomic<int>  out_w{ 0 }, out_h{ 0 };   // 上一张成品的尺寸
+};
+
+Engine            g_e;
+httplib::Server   g_svr;
+std::thread       g_thread;
+// worker 真的退出 listen 循环了吗：卡在模型加载里的线程永远不会置它。
+std::atomic<bool> g_worker_done{ false };
+std::atomic<bool> g_stop{ false };
+// ---- 「正在加载」这件事必须能被外面看见 -------------------------------------
+// 所有请求共用一把 g_e.mu（ensure_ctx 是持锁调 new_sd_ctx 的）：加载期间别的
+// 请求全挤在这把锁上，httplib 的线程池被耗光，连 /health 都答不上来。
+// 所以把加载状态摆成原子变量，在进 handler 之前就挡掉。
+std::atomic<bool> g_loading{ false };
+// 上一次加载被看门狗判死了：这个进程里的图像模型基本没救，但界面和退出还活着。
+std::atomic<bool> g_load_stuck{ false };
+// 加载「第几代」：看门狗只对自己那一代负责，前后两代别互相误伤。
+std::atomic<int>  g_load_gen{ 0 };
+
+const char * b64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+// sd.cpp 每走一步叫一次：记下来给界面看，不干别的
+void on_progress(int step, int steps, float /*time*/, void * /*data*/) {
+    g_e.step  = step;
+    g_e.steps = steps;
+}
+
+std::string base64(const unsigned char * p, size_t n) {
+    std::string out;
+    out.reserve(((n + 2) / 3) * 4);
+    size_t i = 0;
+    for (; i + 2 < n; i += 3) {
+        const unsigned v = (unsigned) p[i] << 16 | (unsigned) p[i + 1] << 8 | p[i + 2];
+        out.push_back(b64chars[(v >> 18) & 63]);
+        out.push_back(b64chars[(v >> 12) & 63]);
+        out.push_back(b64chars[(v >> 6) & 63]);
+        out.push_back(b64chars[v & 63]);
+    }
+    if (i + 1 == n) {
+        const unsigned v = (unsigned) p[i] << 16;
+        out.push_back(b64chars[(v >> 18) & 63]);
+        out.push_back(b64chars[(v >> 12) & 63]);
+        out += "==";
+    } else if (i + 2 == n) {
+        const unsigned v = (unsigned) p[i] << 16 | (unsigned) p[i + 1] << 8;
+        out.push_back(b64chars[(v >> 18) & 63]);
+        out.push_back(b64chars[(v >> 12) & 63]);
+        out.push_back(b64chars[(v >> 6) & 63]);
+        out.push_back('=');
+    }
+    return out;
+}
+
+bool write_file(const std::string & path, const void * data, size_t n) {
+    FILE * f = std::fopen(path.c_str(), "wb");
+    if (f == nullptr) {
+        return false;
+    }
+    const size_t w = std::fwrite(data, 1, n, f);
+    std::fclose(f);
+    return w == n;
+}
+
+// 进来置「正在加载」，离开（任何 return、任何异常）清掉。用 RAII 是因为
+// ensure_ctx 有三条失败出口，手写 store(false) 一定会漏一条。
+struct LoadingScope {
+    ~LoadingScope() { g_loading.store(false); }
+};
+
+// new_sd_ctx 是阻塞调用，线程进去了外面打断不了（没有取消接口），所以不指望
+// 杀掉它 —— 只保证【别的请求和退出流程不再被它陪葬】：180 秒还没下来就认定
+// 这次加载废了，把 503 的语义从「在加载」改成「已放弃」，客户端别干等。
+// 每一代单独算：早先那次加载晚到的看门狗，不许误伤新一代。
+void start_load_watchdog(int gen) {
+    std::thread([gen] {
+        for (int i = 0; i < 180; ++i) {
+            usleep(1000 * 1000);
+            if (!g_loading.load() || g_load_gen.load() != gen) {
+                return;   // 加载完了，或者这已经是下一代的活
+            }
+        }
+        if (!g_loading.load() || g_load_gen.load() != gen) {
+            return;
+        }
+        std::printf("ps5mm-sd: load watchdog fired after 180s (gen %d), giving up on this load\n", gen);
+        std::fflush(nullptr);
+        g_loading.store(false);
+        g_load_stuck.store(true);
+    }).detach();
+}
+
+// Loads the model if it is not in yet. Called with g_e.mu held.
+bool ensure_ctx(std::string & err) {
+    if (g_e.ctx != nullptr) {
+        return true;
+    }
+    // 从这里往下都算「正在加载」：pre-routing 会拿它挡掉别的请求。
+    LoadingScope loading_scope;
+    const int load_gen = ++g_load_gen;
+    g_loading.store(true);
+    start_load_watchdog(load_gen);
+    if (g_e.models.diffusion == nullptr || g_e.models.diffusion[0] == 0) {
+        err = "no model is configured";
+        return false;
+    }
+    // 装不下就别开：new_sd_ctx 在内存不够时会卡在分配里不返回，
+    // 连主循环的 quit 都读不到（实测 SDXL 6.6 GB 卡死 900 秒）。
+    // 判据：文件大小 ×2（CPU 一份 + GPU 一份）不得超过池子的 85%。
+    {
+        struct stat st {};
+        const double pool_gib = ps5mm::caps().pool_gib;
+        if (::stat(g_e.models.diffusion, &st) == 0 && st.st_size > 0 && pool_gib > 0.1) {
+            const double file_gib = (double) st.st_size / (1024.0 * 1024.0 * 1024.0);
+            const double need_gib = file_gib * 2.0;
+            if (need_gib > pool_gib * 0.85) {
+                char msg[220];
+                std::snprintf(msg, sizeof msg,
+                              "模型太大：需要约 %.0f GiB（CPU+GPU 各一份），池子只有 %.0f GiB。"
+                              "换小一点的模型，或先关掉别的引擎。",
+                              need_gib, pool_gib);
+                err = msg;
+                std::printf("ps5mm-sd: refused loading (%.1f GiB x2 > %.1f GiB pool)\n", file_gib, pool_gib * 0.85);
+                std::fflush(nullptr);
+                return false;
+            }
+        }
+    }
+    std::printf("ps5mm-sd: loading %s\n", g_e.models.diffusion);
+    std::fflush(nullptr);
+    const int64_t t0 = (int64_t) ggml_time_ms();
+
+    sd_ctx_params_t cp;
+    sd_ctx_params_init(&cp);
+    // 两个入口别用混：单文件 checkpoint 走 model_path，分离格式走 diffusion_model_path。
+    // （SD1.5/SDXL 的 .safetensors 自带 CLIP+VAE；塞进 diffusion_model_path 会直接返回 null）
+    {
+        const std::string mpath = g_e.models.diffusion;
+        const bool has_clip = (g_e.models.clip_l != nullptr && g_e.models.clip_l[0] != 0) ||
+                              (g_e.models.clip_g != nullptr && g_e.models.clip_g[0] != 0);
+        const bool is_sfx  = mpath.size() > 12 && mpath.rfind(".safetensors") == mpath.size() - 12;
+        const bool is_ckpt = mpath.size() > 5 && mpath.rfind(".ckpt") == mpath.size() - 5;
+        if ((is_sfx || is_ckpt) && !has_clip) {
+            cp.model_path = g_e.models.diffusion;
+            std::printf("ps5mm-sd: %s -> model_path (single-file checkpoint)\n", g_e.models.diffusion);
+        } else {
+            cp.diffusion_model_path = g_e.models.diffusion;
+            std::printf("ps5mm-sd: %s -> diffusion_model_path (split components)\n", g_e.models.diffusion);
+        }
+        std::fflush(nullptr);
+    }
+    cp.clip_l_path = (g_e.models.clip_l != nullptr && g_e.models.clip_l[0] != 0) ? g_e.models.clip_l : nullptr;
+    cp.clip_g_path = (g_e.models.clip_g != nullptr && g_e.models.clip_g[0] != 0) ? g_e.models.clip_g : nullptr;
+    cp.t5xxl_path  = (g_e.models.t5xxl != nullptr && g_e.models.t5xxl[0] != 0) ? g_e.models.t5xxl : nullptr;
+    cp.vae_path    = (g_e.models.vae != nullptr && g_e.models.vae[0] != 0) ? g_e.models.vae : nullptr;
+    // Not a constant any more: the caps layer measured this console.
+    cp.n_threads   = ps5mm::caps().threads;
+    cp.enable_mmap = true;
+    cp.flash_attn  = true;
+
+
+    g_e.ctx = new_sd_ctx(&cp);
+    if (g_e.ctx == nullptr && cp.flash_attn) {
+        // Vulkan 后端不一定吃 flash attention。失败一次就关掉重试，
+        // 省得为了一个参数再走一轮「改代码→重编→点图标」。
+        std::printf("ps5mm-sd: load failed with flash_attn, retrying without it\n");
+        std::fflush(nullptr);
+        cp.flash_attn = false;
+        g_e.ctx = new_sd_ctx(&cp);
+    }
+    if (g_e.ctx == nullptr) {
+        err = "could not load the model";
+        std::printf("ps5mm-sd: could not load %s\n", g_e.models.diffusion);
+        std::fflush(nullptr);
+        return false;
+    }
+    g_e.ready = true;
+    g_load_stuck.store(false);   // 这次真加载上了，上一次的判决作废
+    std::printf("ps5mm-sd: loaded in %lld ms\n", (long long) (ggml_time_ms() - t0));
+    std::fflush(nullptr);
+    return true;
+}
+
+struct Picture {
+    std::string png;
+    int         width  = 0;
+    int         height = 0;
+};
+
+bool draw_image(const json & body, std::vector<Picture> & pics, std::string & err) {
+    const std::string prompt = body.value("prompt", std::string());
+    if (prompt.empty()) {
+        err = "prompt is empty";
+        return false;
+    }
+    if (!ensure_ctx(err)) {
+        return false;
+    }
+    sd_img_gen_params_t gp;
+    sd_img_gen_params_init(&gp);
+    gp.prompt = prompt.c_str();
+    const std::string negative = body.value("negative_prompt", std::string());
+    gp.negative_prompt   = negative.empty() ? nullptr : negative.c_str();
+    gp.width             = body.value("width", 1024);
+    gp.height            = body.value("height", 1024);
+    gp.seed              = body.value("seed", (int64_t) -1);
+    gp.batch_count       = 1;
+    gp.sample_params.sample_steps     = body.value("steps", 20);
+    gp.sample_params.guidance.txt_cfg = body.value("cfg_scale", 5.0f);
+    // Wan decodes a whole clip's latents at once; tiles keep that inside the pool.
+    // Tile side comes from the caps layer: bigger tiles mean fewer, fatter
+    // Vulkan dispatches, which is how a wider GPU gets used at all.
+    {
+        const int tile = ps5mm::caps().vae_tile;
+        gp.vae_tiling_params.enabled        = tile > 0;
+        gp.vae_tiling_params.tile_size_w    = tile > 0 ? tile : 0;
+        gp.vae_tiling_params.tile_size_h    = tile > 0 ? tile : 0;
+        gp.vae_tiling_params.target_overlap = 0.125f;
+    }
+    sd_image_t * images   = nullptr;
+    int          n_images = 0;
+    const int64_t t0      = (int64_t) ggml_time_ms();
+    if (!generate_image(g_e.ctx, &gp, &images, &n_images) || images == nullptr) {
+        err = "generation failed";
+        return false;
+    }
+    for (int i = 0; i < n_images; ++i) {
+        const sd_image_t & im = images[i];
+        if (im.data == nullptr || im.width == 0) {
+            continue;
+        }
+        int             len = 0;
+        unsigned char * png = stbi_write_png_to_mem(im.data, 0, (int) im.width, (int) im.height, (int) im.channel,
+                                                    &len, nullptr);
+        if (png == nullptr) {
+            continue;
+        }
+        Picture pic;
+        pic.png.assign((const char *) png, (size_t) len);
+        pic.width  = (int) im.width;
+        pic.height = (int) im.height;
+        STBIW_FREE(png);
+        char name[200];
+        std::snprintf(name, sizeof name, "%s/txt2img-%ld-%d.png", g_e.out_dir.c_str(), g_e.jobs.load(), i);
+        write_file(name, pic.png.data(), pic.png.size());
+        pics.push_back(std::move(pic));
+        free(im.data);
+    }
+    free(images);
+    std::printf("ps5mm-sd: %zu picture(s) %dx%d in %lld ms\n", pics.size(), gp.width, gp.height,
+                (long long) (ggml_time_ms() - t0));
+    std::fflush(nullptr);
+    if (pics.empty()) {
+        err = "no picture came out";
+        return false;
+    }
+    return true;
+}
+
+// ---- MJPEG AVI ---------------------------------------------------------------
+void put32(std::vector<unsigned char> & b, uint32_t v) {
+    b.push_back((unsigned char) (v & 255));
+    b.push_back((unsigned char) ((v >> 8) & 255));
+    b.push_back((unsigned char) ((v >> 16) & 255));
+    b.push_back((unsigned char) ((v >> 24) & 255));
+}
+void put16(std::vector<unsigned char> & b, uint16_t v) {
+    b.push_back((unsigned char) (v & 255));
+    b.push_back((unsigned char) ((v >> 8) & 255));
+}
+void putcc(std::vector<unsigned char> & b, const char * s) {
+    b.insert(b.end(), s, s + 4);
+    b.push_back(0);   // fourcc is 4 bytes, nothing more
+    b.pop_back();
+}
+
+struct JpegSink {
+    std::vector<unsigned char> * out;
+};
+
+bool frame_jpeg(const sd_image_t & im, int quality, std::vector<unsigned char> & out) {
+    out.clear();
+    JpegSink sink{ &out };
+    const auto cb = [](void * ctx, void * data, int size) {
+        auto * s = static_cast<JpegSink *>(ctx);
+        const unsigned char * p = static_cast<const unsigned char *>(data);
+        s->out->insert(s->out->end(), p, p + size);
+    };
+    return stbi_write_jpg_to_func(cb, &sink, (int) im.width, (int) im.height, (int) im.channel, im.data, quality) != 0 &&
+           !out.empty();
+}
+
+std::vector<unsigned char> mjpeg_avi(const std::vector<std::vector<unsigned char>> & frames, int width, int height,
+                                     int fps) {
+    std::vector<unsigned char> out;
+    const int      n    = (int) frames.size();
+    const uint32_t rate = (uint32_t) (fps > 0 ? fps : 16);
+
+    uint32_t movi_payload = 4;   // "movi"
+    for (const auto & f : frames) {
+        movi_payload += 8 + (uint32_t) f.size() + ((f.size() & 1) ? 1u : 0u);
+    }
+    const uint32_t idx_payload  = 16u * (uint32_t) n;
+    const uint32_t hdrl_payload = 4 + (8 + 56) + (4 + (8 + 56) + (8 + 40));
+    const uint32_t riff_payload = 4 + (8 + hdrl_payload) + (8 + movi_payload) + (8 + idx_payload);
+
+    putcc(out, "RIFF");
+    put32(out, riff_payload);
+    putcc(out, "AVI ");
+
+    putcc(out, "LIST");
+    put32(out, hdrl_payload);
+    putcc(out, "hdrl");
+
+    putcc(out, "avih");
+    put32(out, 56);
+    put32(out, 1000000u / rate);
+    put32(out, (uint32_t) ((uint64_t) n * 1000000u / rate));
+    put32(out, 0);
+    put32(out, 0x00000110);   // AVIF_HASINDEX | AVIF_ISINTERLEAVED
+    put32(out, (uint32_t) n);
+    put32(out, 0);
+    put32(out, 1);
+    put32(out, frames.empty() ? 0u : (uint32_t) frames[0].size());
+    put32(out, (uint32_t) width);
+    put32(out, (uint32_t) height);
+    for (int i = 0; i < 4; ++i) put32(out, 0);
+
+    putcc(out, "LIST");
+    put32(out, 4 + (8 + 56) + (8 + 40));
+    putcc(out, "strl");
+
+    putcc(out, "strh");
+    put32(out, 56);
+    putcc(out, "vids");
+    putcc(out, "MJPG");
+    put32(out, 0);
+    put16(out, 0);
+    put16(out, 0);
+    put32(out, 0);
+    put32(out, 1);
+    put32(out, rate);
+    put32(out, 0);
+    put32(out, (uint32_t) n);
+    put32(out, (uint32_t) ((uint64_t) n * 1000000u / rate));
+    put32(out, 0);
+    put32(out, 0xFFFFFFFF);
+    put32(out, 0);
+    put16(out, 0); put16(out, 0); put16(out, 0); put16(out, 0);
+
+    putcc(out, "strf");
+    put32(out, 40);
+    put32(out, 40);
+    put32(out, (uint32_t) width);
+    put32(out, (uint32_t) height);
+    put16(out, 1);
+    put16(out, 24);
+    putcc(out, "MJPG");
+    put32(out, (uint32_t) (width * height * 3));
+    put32(out, 0); put32(out, 0); put32(out, 0); put32(out, 0);
+
+    putcc(out, "LIST");
+    put32(out, movi_payload);
+    putcc(out, "movi");
+    std::vector<uint32_t> offsets;
+    offsets.reserve((size_t) n);
+    for (const auto & f : frames) {
+        // Offsets in idx1 count from the "movi" fourcc (4 + 4 + 4 + 4 before it).
+        offsets.push_back((uint32_t) (out.size() - (4 + 4 + 4 + 4)));
+        putcc(out, "00dc");
+        put32(out, (uint32_t) f.size());
+        out.insert(out.end(), f.begin(), f.end());
+        if (f.size() & 1) {
+            out.push_back(0);
+        }
+    }
+
+    putcc(out, "idx1");
+    put32(out, idx_payload);
+    for (int i = 0; i < n; ++i) {
+        putcc(out, "00dc");
+        put32(out, 0x00000010);
+        put32(out, offsets[(size_t) i]);
+        put32(out, (uint32_t) frames[(size_t) i].size());
+    }
+    return out;
+}
+
+bool make_video(const json & body, std::vector<unsigned char> & avi, std::string & err) {
+    const std::string prompt = body.value("prompt", std::string());
+    if (prompt.empty()) {
+        err = "prompt is empty";
+        return false;
+    }
+    if (!ensure_ctx(err)) {
+        return false;
+    }
+    sd_vid_gen_params_t gp;
+    sd_vid_gen_params_init(&gp);
+    gp.prompt = prompt.c_str();
+    const std::string negative = body.value("negative_prompt", std::string());
+    gp.negative_prompt   = negative.empty() ? nullptr : negative.c_str();
+    gp.width             = body.value("width", 832);
+    gp.height            = body.value("height", 480);
+    gp.video_frames      = body.value("frames", 33);
+    gp.fps               = body.value("fps", 16);
+    gp.seed              = body.value("seed", (int64_t) -1);
+    gp.sample_params.sample_steps     = body.value("steps", 20);
+    gp.sample_params.guidance.txt_cfg = body.value("cfg_scale", 5.0f);
+    // Wan decodes a whole clip's latents at once; tiles keep that inside the pool.
+    // Tile side comes from the caps layer: bigger tiles mean fewer, fatter
+    // Vulkan dispatches, which is how a wider GPU gets used at all.
+    {
+        const int tile = ps5mm::caps().vae_tile;
+        gp.vae_tiling_params.enabled        = tile > 0;
+        gp.vae_tiling_params.tile_size_w    = tile > 0 ? tile : 0;
+        gp.vae_tiling_params.tile_size_h    = tile > 0 ? tile : 0;
+        gp.vae_tiling_params.target_overlap = 0.125f;
+    }
+    sd_image_t * frames = nullptr;
+    int          count  = 0;
+    sd_audio_t * audio  = nullptr;
+    int          fps    = gp.fps;
+    const int64_t t0    = (int64_t) ggml_time_ms();
+    if (!generate_video(g_e.ctx, &gp, &frames, &count, &audio, &fps) || frames == nullptr || count <= 0) {
+        err = "generation failed";
+        return false;
+    }
+
+    std::vector<std::vector<unsigned char>> jpegs;
+    jpegs.reserve((size_t) count);
+    for (int i = 0; i < count; ++i) {
+        std::vector<unsigned char> j;
+        if (frame_jpeg(frames[i], 90, j)) {
+            jpegs.push_back(std::move(j));
+        }
+        if (frames[i].data != nullptr) {
+            free(frames[i].data);
+        }
+    }
+    free(frames);
+    if (audio != nullptr) {
+        if (audio->data != nullptr) {
+            free(audio->data);
+        }
+        free(audio);
+    }
+    if (jpegs.empty()) {
+        err = "no frame came out";
+        return false;
+    }
+    avi = mjpeg_avi(jpegs, gp.width, gp.height, fps > 0 ? fps : gp.fps);
+    char name[200];
+    std::snprintf(name, sizeof name, "%s/txt2vid-%ld.avi", g_e.out_dir.c_str(), g_e.jobs.load());
+    write_file(name, avi.data(), avi.size());
+    std::printf("ps5mm-sd: %zu frame(s) %dx%d @%d fps in %lld ms -> %s\n", jpegs.size(), gp.width, gp.height,
+                fps > 0 ? fps : gp.fps, (long long) (ggml_time_ms() - t0), name);
+    std::fflush(nullptr);
+    return true;
+}
+
+// ---- routes -------------------------------------------------------------------
+void send_error(httplib::Response & res, int code, const std::string & msg) {
+    res.status = code;
+    res.set_content(json{ { "error", msg } }.dump(), "application/json");
+}
+
+json parse_body(const httplib::Request & req, httplib::Response & res) {
+    json body = json::parse(req.body, nullptr, false);
+    if (body.is_discarded() || !body.is_object()) {
+        send_error(res, 400, "the body is not a JSON object");
+        return json();
+    }
+    return body;
+}
+
+void on_txt2img(const httplib::Request & req, httplib::Response & res) {
+    const json body = parse_body(req, res);
+    if (body.is_null()) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_e.mu);
+    g_e.jobs++;
+    std::vector<Picture> pics;
+    std::string          err;
+    if (!draw_image(body, pics, err)) {
+        send_error(res, 500, err);
+        return;
+    }
+    json images = json::array();
+    for (const auto & p : pics) {
+        images.push_back(base64((const unsigned char *) p.png.data(), p.png.size()));
+    }
+    res.set_content(json{ { "images", images }, { "info", g_e.models.diffusion } }.dump(), "application/json");
+}
+
+void on_txt2vid(const httplib::Request & req, httplib::Response & res) {
+    const json body = parse_body(req, res);
+    if (body.is_null()) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_e.mu);
+    g_e.jobs++;
+    std::vector<unsigned char> avi;
+    std::string                err;
+    if (!make_video(body, avi, err)) {
+        send_error(res, 500, err);
+        return;
+    }
+    res.set_content(std::string((const char *) avi.data(), avi.size()), "video/x-msvideo");
+}
+
+void on_openai_images(const httplib::Request & req, httplib::Response & res) {
+    const json body = parse_body(req, res);
+    if (body.is_null()) {
+        return;
+    }
+    const std::string size = body.value("size", std::string("1024x1024"));
+    json shaped        = body;
+    if (const size_t x = size.find('x'); x != std::string::npos) {
+        shaped["width"]  = std::atoi(size.substr(0, x).c_str());
+        shaped["height"] = std::atoi(size.substr(x + 1).c_str());
+    }
+    std::lock_guard<std::mutex> lock(g_e.mu);
+    g_e.jobs++;
+    std::vector<Picture> pics;
+    std::string          err;
+    if (!draw_image(shaped, pics, err)) {
+        send_error(res, 500, err);
+        return;
+    }
+    json data = json::array();
+    for (const auto & p : pics) {
+        data.push_back(json{ { "b64_json", base64((const unsigned char *) p.png.data(), p.png.size()) } });
+    }
+    res.set_content(json{ { "created", (long long) std::time(nullptr) }, { "data", data } }.dump(), "application/json");
+}
+
+// Upscales one picture with the ESRGAN model the settings name, on demand:
+// the model is small next to the rest, but there is no point holding it from
+// the start either.
+bool upscale_one(const std::string & in_path, int out_scale, std::string & out_png, std::string & err) {
+    if (g_e.models.esrgan == nullptr || g_e.models.esrgan[0] == 0) {
+        err = "no upscaler model is configured";
+        return false;
+    }
+    if (g_e.upscaler == nullptr) {
+        std::printf("ps5mm-sd: loading upscaler %s\n", g_e.models.esrgan);
+        std::fflush(nullptr);
+        g_e.upscaler = new_upscaler_ctx(g_e.models.esrgan, false, 4, 256, nullptr, nullptr);
+        if (g_e.upscaler == nullptr) {
+            err = "could not load the upscaler model";
+            return false;
+        }
+    }
+    int w = 0, h = 0, comp = 0;
+    unsigned char * pixels = stbi_load(in_path.c_str(), &w, &h, &comp, 3);
+    if (pixels == nullptr) {
+        err = "could not read that picture";
+        return false;
+    }
+    sd_image_t in{ (uint32_t) w, (uint32_t) h, 3, pixels };
+    sd_image_t * outs = nullptr;
+    int          n_out = 0;
+    const uint32_t factor = (uint32_t) (out_scale > 0 ? out_scale : get_upscale_factor(g_e.upscaler));
+    const bool ok = upscale(g_e.upscaler, in, factor, &outs, &n_out);
+    stbi_image_free(pixels);
+    if (!ok || outs == nullptr || n_out <= 0) {
+        err = "upscaling failed";
+        return false;
+    }
+    const sd_image_t out = outs[0];
+    int             len = 0;
+    unsigned char * png = stbi_write_png_to_mem(out.data, 0, (int) out.width, (int) out.height, (int) out.channel,
+                                                &len, nullptr);
+    free(out.data);
+    free(outs);
+    if (png == nullptr) {
+        err = "could not encode the result";
+        return false;
+    }
+    out_png.assign((const char *) png, (size_t) len);
+    STBIW_FREE(png);
+    return true;
+}
+
+void on_upscale(const httplib::Request & req, httplib::Response & res) {
+    const json body = parse_body(req, res);
+    if (body.is_null()) {
+        return;
+    }
+    // A1111's extra-single-image takes image as base64; ours also takes a path.
+    std::string path = body.value("image_path", std::string());
+    if (path.empty()) {
+        const std::string b64 = body.value("image", std::string());
+        if (b64.empty()) {
+            send_error(res, 400, "give image_path or image (base64 png)");
+            return;
+        }
+        // base64 -> file, in the outputs folder
+        std::string raw;
+        raw.reserve(b64.size() * 3 / 4 + 3);
+        unsigned acc = 0;
+        int      bits = 0;
+        for (char c : b64) {
+            int v = -1;
+            if (c >= 'A' && c <= 'Z') v = c - 'A';
+            else if (c >= 'a' && c <= 'z') v = c - 'a' + 26;
+            else if (c >= '0' && c <= '9') v = c - '0' + 52;
+            else if (c == '+') v = 62;
+            else if (c == '/') v = 63;
+            else continue;   // '=' and whitespace
+            acc = (acc << 6) | (unsigned) v;
+            bits += 6;
+            if (bits >= 8) {
+                bits -= 8;
+                raw.push_back((char) ((acc >> bits) & 0xFF));
+            }
+        }
+        char name[200];
+        std::snprintf(name, sizeof name, "%s/upscale-in-%ld.png", g_e.out_dir.c_str(), g_e.jobs.load());
+        if (!write_file(name, raw.data(), raw.size())) {
+            send_error(res, 500, "could not stage the picture");
+            return;
+        }
+        path = name;
+    }
+    std::lock_guard<std::mutex> lock(g_e.mu);
+    g_e.jobs++;
+    std::string png;
+    std::string err;
+    if (!upscale_one(path, body.value("scale", 4), png, err)) {
+        send_error(res, 500, err);
+        return;
+    }
+    char name[200];
+    std::snprintf(name, sizeof name, "%s/upscaled-%ld.png", g_e.out_dir.c_str(), g_e.jobs.load());
+    write_file(name, png.data(), png.size());
+    res.set_content(json{ { "image", base64((const unsigned char *) png.data(), png.size()) }, { "saved", name } }.dump(),
+                    "application/json");
+}
+
+// ---- img2img / inpaint -------------------------------------------------------
+// sd.cpp's generate_image() already handles both: it reads sd_img_gen_params_t's
+// init_image (pipeline/image.cpp:132) and, when mask_image is empty, fills the
+// mask with 1 so the whole picture is repainted (pipeline/image.cpp:209). With a
+// mask, 1 means "repaint here" and 0 means "keep the original" (:344) -- the same
+// convention A1111 uses, so the routes below take A1111's parameter names.
+
+// The inverse of base64(): '=' and whitespace are skipped.
+std::string b64_decode(const std::string & b64) {
+    std::string raw;
+    raw.reserve(b64.size() * 3 / 4 + 3);
+    unsigned acc  = 0;
+    int      bits = 0;
+    for (char c : b64) {
+        int v = -1;
+        if (c >= 'A' && c <= 'Z') v = c - 'A';
+        else if (c >= 'a' && c <= 'z') v = c - 'a' + 26;
+        else if (c >= '0' && c <= '9') v = c - '0' + 52;
+        else if (c == '+') v = 62;
+        else if (c == '/') v = 63;
+        else continue;
+        acc = (acc << 6) | (unsigned) v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            raw.push_back((char) ((acc >> bits) & 0xFF));
+        }
+    }
+    return raw;
+}
+
+// One base64 picture -> sd_image_t (RGB). The caller frees image.data with stbi_image_free.
+bool load_b64_image(const std::string & b64, const char * tag, sd_image_t & image, std::string & err) {
+    const std::string raw = b64_decode(b64);
+    if (raw.empty()) {
+        err = "empty image";
+        return false;
+    }
+    char name[200];
+    std::snprintf(name, sizeof name, "%s/%s-%lld.png", g_e.out_dir.c_str(), tag, (long long) ggml_time_ms());
+    if (!write_file(name, raw.data(), raw.size())) {
+        err = "could not stage the picture";
+        return false;
+    }
+    int             w = 0, h = 0, comp = 0;
+    unsigned char * pixels = stbi_load(name, &w, &h, &comp, 3);
+    if (pixels == nullptr || w <= 0 || h <= 0) {
+        err = "could not decode the picture";
+        return false;
+    }
+    image = sd_image_t{ (uint32_t) w, (uint32_t) h, 3, pixels };
+    return true;
+}
+
+bool draw_from_image(const json & body, bool want_mask, std::vector<Picture> & pics, std::string & err) {
+    const std::string prompt = body.value("prompt", std::string());
+    if (prompt.empty()) {
+        err = "prompt is empty";
+        return false;
+    }
+    // A1111 sends init_images as an array; a single "image" also works.
+    std::string first;
+    if (body.contains("init_images") && body["init_images"].is_array() && !body["init_images"].empty()) {
+        first = body["init_images"][0].get<std::string>();
+    } else {
+        first = body.value("image", std::string());
+    }
+    if (first.empty()) {
+        err = "give init_images (base64 png)";
+        return false;
+    }
+    if (!ensure_ctx(err)) {
+        return false;
+    }
+    sd_image_t init{};
+    if (!load_b64_image(first, "img2img-in", init, err)) {
+        return false;
+    }
+    sd_image_t mask{};
+    if (want_mask) {
+        const std::string m = body.value("mask", std::string());
+        if (m.empty()) {
+            stbi_image_free(init.data);
+            err = "inpaint needs mask (base64; white = repaint)";
+            return false;
+        }
+        if (!load_b64_image(m, "inpaint-mask", mask, err)) {
+            stbi_image_free(init.data);
+            return false;
+        }
+    }
+
+    sd_img_gen_params_t gp;
+    sd_img_gen_params_init(&gp);
+    gp.prompt = prompt.c_str();
+    const std::string negative = body.value("negative_prompt", std::string());
+    gp.negative_prompt = negative.empty() ? nullptr : negative.c_str();
+    // No width/height: repaint at the picture's own size (sd.cpp rescales the
+    // init image to whatever width/height the request asks for).
+    gp.width              = body.value("width", (int) init.width);
+    gp.height             = body.value("height", (int) init.height);
+    gp.seed               = body.value("seed", (int64_t) -1);
+    gp.batch_count        = 1;
+    gp.strength           = body.value("denoising_strength", 0.75f);
+    gp.sample_params.sample_steps     = body.value("steps", 20);
+    gp.sample_params.guidance.txt_cfg = body.value("cfg_scale", 5.0f);
+    gp.init_image = init;
+    if (want_mask) {
+        gp.mask_image = mask;
+    }
+    // Wan-class decoders decode a whole clip's latents at once; tiles keep that inside the pool.
+    // Tile side comes from the caps layer: bigger tiles mean fewer, fatter
+    // Vulkan dispatches, which is how a wider GPU gets used at all.
+    {
+        const int tile = ps5mm::caps().vae_tile;
+        gp.vae_tiling_params.enabled        = tile > 0;
+        gp.vae_tiling_params.tile_size_w    = tile > 0 ? tile : 0;
+        gp.vae_tiling_params.tile_size_h    = tile > 0 ? tile : 0;
+        gp.vae_tiling_params.target_overlap = 0.125f;
+    }
+
+    sd_image_t * images   = nullptr;
+    int          n_images = 0;
+    const int64_t t0      = (int64_t) ggml_time_ms();
+    const bool    ok      = generate_image(g_e.ctx, &gp, &images, &n_images);
+
+    stbi_image_free(init.data);
+    if (want_mask) {
+        stbi_image_free(mask.data);
+    }
+    if (!ok || images == nullptr) {
+        err = "generation failed";
+        return false;
+    }
+    for (int i = 0; i < n_images; ++i) {
+        const sd_image_t & im = images[i];
+        if (im.data == nullptr || im.width == 0) {
+            continue;
+        }
+        int             len = 0;
+        unsigned char * png = stbi_write_png_to_mem(im.data, 0, (int) im.width, (int) im.height, (int) im.channel,
+                                                    &len, nullptr);
+        if (png == nullptr) {
+            continue;
+        }
+        Picture pic;
+        pic.png.assign((const char *) png, (size_t) len);
+        pic.width  = (int) im.width;
+        pic.height = (int) im.height;
+        free(png);
+        pics.push_back(std::move(pic));
+    }
+    std::printf("ps5mm-sd: %s %zu picture(s) %dx%d strength %.2f in %lld ms\n", want_mask ? "inpaint" : "img2img",
+                pics.size(), gp.width, gp.height, (double) gp.strength, (long long) (ggml_time_ms() - t0));
+    std::fflush(nullptr);
+    if (pics.empty()) {
+        err = "no picture came out";
+        return false;
+    }
+    return true;
+}
+
+void answer_pictures(const std::vector<Picture> & pics, httplib::Response & res) {
+    json images = json::array();
+    json saved  = json::array();
+    for (const Picture & p : pics) {
+        images.push_back(base64((const unsigned char *) p.png.data(), p.png.size()));
+    }
+    res.set_content(json{ { "images", images }, { "saved", saved }, { "info", "" } }.dump(), "application/json");
+}
+
+void on_img2img(const httplib::Request & req, httplib::Response & res) {
+    const json body = parse_body(req, res);
+    if (body.is_null()) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_e.mu);
+    g_e.jobs++;
+    std::vector<Picture> pics;
+    std::string          err;
+    if (!draw_from_image(body, false, pics, err)) {
+        send_error(res, 500, err);
+        return;
+    }
+    answer_pictures(pics, res);
+}
+
+void on_inpaint(const httplib::Request & req, httplib::Response & res) {
+    const json body = parse_body(req, res);
+    if (body.is_null()) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_e.mu);
+    g_e.jobs++;
+    std::vector<Picture> pics;
+    std::string          err;
+    if (!draw_from_image(body, true, pics, err)) {
+        send_error(res, 500, err);
+        return;
+    }
+    answer_pictures(pics, res);
+}
+
+void on_health(const httplib::Request &, httplib::Response & res) {
+    json out{ { "ok", true },
+              { "engine", "picture" },
+              { "model_loaded", g_e.ready },
+              { "jobs", (long) g_e.jobs.load() },
+              { "model", g_e.models.diffusion != nullptr ? g_e.models.diffusion : "" } };
+    res.set_content(out.dump(), "application/json");
+}
+
+void on_options(const httplib::Request &, httplib::Response & res) {
+    res.set_content(json{ { "sd_model_checkpoint", g_e.models.diffusion != nullptr ? g_e.models.diffusion : "" } }.dump(),
+                    "application/json");
+}
+
+}  // namespace
+
+int sd_server_start(const SdModels & models, int port) {
+    g_e.take_models(models);   // 抄一份自己的，别留调用方的裸指针
+    g_e.out_dir      = g_e.models.output_dir != nullptr ? g_e.models.output_dir : "/data/PS5MM/outputs";
+    mkdir(g_e.out_dir.c_str(), 0777);
+    std::printf("ps5mm-sd: routes on :%d, model %s (loads on first request), writes %s\n", port,
+                g_e.models.diffusion != nullptr ? g_e.models.diffusion : "(none)", g_e.out_dir.c_str());
+    std::fflush(nullptr);
+
+    g_svr.Get("/health", on_health);
+    g_svr.Get("/sdapi/v1/options", on_options);
+    g_svr.Post("/sdapi/v1/txt2img", on_txt2img);
+    g_svr.Post("/sdapi/v1/txt2vid", on_txt2vid);
+    g_svr.Post("/v1/images/generations", on_openai_images);
+    g_svr.Post("/sdapi/v1/upscale", on_upscale);
+    g_svr.Post("/sdapi/v1/img2img", on_img2img);
+    g_svr.Post("/sdapi/v1/inpaint", on_inpaint);
+    // FFmpeg routes ride along: media is plumbing, not an engine
+    // that deserves a slot of its own.
+    ps5mm::media_register_routes(g_svr);
+    // Frame interpolation rides along too: RIFE holds no resident model.
+    ps5mm::interp_register_routes(g_svr, "/data/PS5MM/rife");
+    // 加载期间别让别的请求挤进来把线程池耗光：在进 handler（也就是进那把
+    // g_e.mu）之前就挡掉。/health 例外 —— 探活永远要答得上来。
+    g_svr.set_pre_routing_handler([](const httplib::Request & req, httplib::Response & res) {
+        if (req.path == "/health") {
+            return httplib::Server::HandlerResponse::Unhandled;
+        }
+        if (g_load_stuck.load()) {
+            res.status = 503;
+            res.set_content(R"({"error":"上次加载超时，已放弃；重启 PS5MM 再来一次"})", "application/json");
+            return httplib::Server::HandlerResponse::Handled;
+        }
+        if (g_loading.load()) {
+            res.status = 503;
+            res.set_content(R"({"error":"model is loading, retry later"})", "application/json");
+            return httplib::Server::HandlerResponse::Handled;
+        }
+        return httplib::Server::HandlerResponse::Unhandled;
+    });
+    g_svr.set_read_timeout(120, 0);
+    g_svr.set_write_timeout(3600, 0);   // a 33-frame 832x480 clip is minutes
+    g_svr.set_payload_max_length(4 * 1024 * 1024);
+    sd_set_progress_callback(on_progress, nullptr);
+
+    g_thread = std::thread([port] {
+        if (!g_svr.listen("0.0.0.0", port)) {
+            std::printf("ps5mm-sd: could not listen on %d\n", port);
+            std::fflush(nullptr);
+        }
+        std::printf("ps5mm-sd: the listener stopped\n");
+        std::fflush(nullptr);
+        g_worker_done.store(true);   // 只有真正退出 listen 才会走到这里
+    });
+    return 0;
+}
+
+void sd_server_terminate(void) {
+    if (g_stop.exchange(true)) {
+        return;
+    }
+    g_svr.stop();
+    if (!g_thread.joinable()) {
+        return;
+    }
+    // 线程可能正卡在 new_sd_ctx()（Vulkan 分配 / safetensors 解析）里，
+    // 永远回不到 listen 循环 —— 那样 join() 会把整个退出流程拖死：
+    //     Options 两次 → 弹提示（主循环活着）→ 再按 → 卡在"正在退出"
+    //     8002 掉了、8001/8004/8005 还在 = 根本没走到 LoadExec
+    //     app.log 里从来没有 "ps5mm-sd: the listener stopped"
+    // llama 那条 models.stop() 早就用「限时等，等不到就放弃」兜住了，照抄。
+    bool finished = g_worker_done.load();
+    for (int i = 0; i < 30 && !finished; ++i) {
+        usleep(100 * 1000);
+        finished = g_worker_done.load();
+    }
+    if (finished) {
+        g_thread.join();
+        if (g_e.ctx != nullptr) {
+            free_sd_ctx(g_e.ctx);
+            g_e.ctx = nullptr;
+        }
+    } else {
+        std::printf("ps5mm-sd: worker stuck in a load; detaching so exit cannot hang\n");
+        std::fflush(nullptr);
+        g_thread.detach();   // 不 free ctx：那个线程可能还在用它，而进程马上要退
+    }
+}
+
+// 启动时就加载（设置里勾了「启动加载」才调）。失败不致命：路由还在，第一次请求会再试。
+int sd_server_preload(void) {
+    std::lock_guard<std::mutex> lock(g_e.mu);
+    if (g_e.ctx != nullptr) {
+        return 0;
+    }
+    std::string err;
+    if (!ensure_ctx(err)) {
+        std::printf("ps5mm-sd: preload failed: %s\n", err.c_str());
+        std::fflush(nullptr);
+        return -1;
+    }
+    std::printf("ps5mm-sd: preloaded at boot\n");
+    std::fflush(nullptr);
+    return 0;
+}
+
+void sd_server_progress(int * step, int * steps) {
+    if (step != nullptr) {
+        *step = g_e.step.load();
+    }
+    if (steps != nullptr) {
+        *steps = g_e.steps.load();
+    }
+}
+
+bool sd_server_ready(void) {
+    return g_e.ready;
+}
+
+bool sd_server_listening(void) {
+    return !g_stop.load();
+}
+
+std::string sd_server_state(void) {
+    char buf[512];
+    std::snprintf(buf, sizeof buf, "model=%s loaded=%d jobs=%ld step=%d/%d", g_e.models.diffusion != nullptr ? g_e.models.diffusion : "-",
+                  g_e.ready ? 1 : 0, g_e.jobs.load(), g_e.step.load(), g_e.steps.load());
+    return std::string(buf);
+}

@@ -1,0 +1,609 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "model_plan.hpp"
+#include "adaptive.hpp"
+#include "ports.hpp"
+
+#include <dirent.h>
+#include <sys/stat.h>
+
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <cstring>
+#include <map>
+
+namespace ps5lm {
+
+namespace {
+
+constexpr double kGiB = 1073741824.0;
+
+// GGUF metadata value types.
+enum : uint32_t { U8, I8, U16, I16, U32, I32, F32, BOOL, STRING, ARRAY, U64, I64, F64 };
+
+// A GGUF header from a file, or from memory (the start of a remote file);
+// the PS5's libc has no fmemopen.
+struct Reader {
+    FILE *       f   = nullptr;
+    const char * mem = nullptr;
+    size_t       size = 0, pos = 0;
+    bool         bad = false;
+
+    size_t read(void * out, size_t n) {
+        if (f) {
+            return std::fread(out, 1, n, f);
+        }
+        const size_t k = pos + n <= size ? n : 0;
+        std::memcpy(out, mem + pos, k);
+        pos += k;
+        return k;
+    }
+    template <typename T> T get() {
+        T v{};
+        if (read(&v, sizeof(v)) != sizeof(v)) {
+            bad = true;
+        }
+        return v;
+    }
+    std::string str() {
+        const uint64_t n = get<uint64_t>();
+        if (bad || n > (1u << 24)) {
+            bad = true;
+            return {};
+        }
+        std::string s(n, '\0');
+        if (n && read(s.data(), n) != n) {
+            bad = true;
+        }
+        return s;
+    }
+    void skip(uint64_t n) {
+        if (f ? std::fseek(f, (long) n, SEEK_CUR) != 0 : pos + n > size) {
+            bad = true;
+        }
+        pos += f ? 0 : n;
+    }
+};
+
+uint64_t scalar_size(uint32_t t) {
+    switch (t) {
+        case U8: case I8: case BOOL: return 1;
+        case U16: case I16: return 2;
+        case U32: case I32: case F32: return 4;
+        case U64: case I64: case F64: return 8;
+        default: return 0;
+    }
+}
+
+// A scalar as an integer; 0 for strings and arrays.
+uint64_t read_int(Reader & r, uint32_t t) {
+    switch (t) {
+        case U8: return r.get<uint8_t>();
+        case I8: return (uint64_t) r.get<int8_t>();
+        case U16: return r.get<uint16_t>();
+        case I16: return (uint64_t) r.get<int16_t>();
+        case U32: return r.get<uint32_t>();
+        case I32: return (uint64_t) r.get<int32_t>();
+        case U64: return r.get<uint64_t>();
+        case I64: return (uint64_t) r.get<int64_t>();
+        case BOOL: return r.get<uint8_t>();
+        case F32: return (uint64_t) r.get<float>();
+        case F64: return (uint64_t) r.get<double>();
+        default: return 0;
+    }
+}
+
+std::string lower(std::string s) {
+    for (auto & c : s) {
+        c = (char) std::tolower((unsigned char) c);
+    }
+    return s;
+}
+
+}  // namespace
+
+// The vision projector for a model: an "mmproj" .gguf in the same folder.
+// With several, the one whose name shares the longest start with the
+// model's, once "mmproj" and separators are set aside
+// ("mmproj-gemma-4-E4B-f16.gguf" for "gemma-4-E4B_q4_0-it.gguf").
+std::string find_mmproj(const std::string & model_path) {
+    const size_t slash = model_path.find_last_of('/');
+    const std::string dir = model_path.substr(0, slash);
+    const auto key = [](std::string n) {
+        n = lower(n);
+        if (const size_t at = n.find("mmproj"); at != std::string::npos) {
+            n.erase(at, 6);
+        }
+        n.erase(std::remove_if(n.begin(), n.end(), [](char c) { return c == '-' || c == '_' || c == '.'; }), n.end());
+        return n;
+    };
+    const std::string want = key(model_path.substr(slash + 1));
+    std::string best;
+    size_t      best_len = 0;
+    DIR * d = opendir(dir.c_str());
+    if (!d) {
+        return best;
+    }
+    while (dirent * e = readdir(d)) {
+        const std::string n = e->d_name;
+        if (lower(n).find("mmproj") == std::string::npos || n.size() < 6 || lower(n.substr(n.size() - 5)) != ".gguf") {
+            continue;
+        }
+        const std::string k = key(n);
+        size_t common = 0;
+        while (common < k.size() && common < want.size() && k[common] == want[common]) {
+            ++common;
+        }
+        // At least the family's name in common ("gemma4e4b"), so a lone
+        // projector of another model is not paired.
+        if (common >= 5 && common > best_len) {
+            best = dir + "/" + n;
+            best_len = common;
+        }
+    }
+    closedir(d);
+    return best;
+}
+
+namespace {
+
+// Reads a GGUF header from `f` (and closes it). `file_bytes` is the whole
+// file's size when `f` holds only its start; 0 to measure `f`.
+ModelInfo parse_model_info(Reader r, const std::string & path, uint64_t file_bytes) {
+    FILE * f = r.f;
+    ModelInfo m;
+    m.path      = path;
+    m.file_name = path.substr(path.find_last_of('/') + 1);
+    m.name      = m.file_name;
+
+    if (!f && !r.mem) {
+        m.error = "打不开";
+        return m;
+    }
+    if (r.get<uint32_t>() != 0x46554747u) {  // "GGUF"
+        if (f) {
+            std::fclose(f);
+        }
+        m.error = "not a GGUF file";
+        return m;
+    }
+    r.get<uint32_t>();  // version
+    r.get<uint64_t>();  // tensor count
+    const uint64_t n_kv = r.get<uint64_t>();
+
+    std::map<std::string, uint64_t> ints;  // every scalar, and the largest element of numeric arrays
+    std::map<std::string, std::string> strs;
+    for (uint64_t i = 0; i < n_kv && !r.bad; i++) {
+        const std::string key = r.str();
+        const uint32_t    t   = r.get<uint32_t>();
+        if (t == STRING) {
+            strs[key] = r.str();
+        } else if (t == ARRAY) {
+            const uint32_t et = r.get<uint32_t>();
+            const uint64_t n  = r.get<uint64_t>();
+            if (et == STRING) {
+                for (uint64_t j = 0; j < n && !r.bad; j++) {
+                    r.skip(r.get<uint64_t>());
+                }
+            } else if (n <= 4096) {  // per-layer values, such as head_count_kv
+                uint64_t mx = 0;
+                for (uint64_t j = 0; j < n; j++) {
+                    mx = std::max(mx, read_int(r, et));
+                }
+                ints[key] = mx;
+            } else {
+                r.skip(n * scalar_size(et));  // vocabularies and the like
+            }
+        } else {
+            ints[key] = read_int(r, t);
+        }
+    }
+    if (f) {
+        std::fseek(f, 0, SEEK_END);
+    }
+    m.file_bytes = file_bytes ? file_bytes : f ? (uint64_t) std::ftell(f) : r.size;
+    if (f) {
+        std::fclose(f);
+    }
+    if (r.bad) {
+        m.error = "读不到元数据";
+        return m;
+    }
+
+    m.arch = strs["general.architecture"];
+    if (!strs["general.name"].empty()) {
+        m.name = strs["general.name"];
+    }
+    const std::string a = m.arch + ".";
+    m.decision = strs[a + "decision.type"];
+    auto num = [&](const std::string & k, uint64_t def = 0) {
+        auto it = ints.find(a + k);
+        return it == ints.end() ? def : it->second;
+    };
+    // block_count includes the MTP blocks some files carry (Qwen 3.8's
+    // UD-Q2_K_XL has 65); they are not part of the main stack.
+    m.n_layer         = (uint32_t) (num("block_count") - num("nextn_predict_layers"));
+    const uint64_t n_head = num("attention.head_count");
+    m.n_head_kv       = (uint32_t) num("attention.head_count_kv", n_head);
+    const uint64_t n_embd = num("embedding_length");
+    const uint64_t head_dim = n_head ? n_embd / n_head : 0;
+    m.key_length      = (uint32_t) num("attention.key_length", head_dim);
+    m.value_length    = (uint32_t) num("attention.value_length", head_dim);
+    m.full_attn_every = (uint32_t) std::max<uint64_t>(1, num("full_attention_interval", 1));
+    m.n_ctx_train     = (uint32_t) num("context_length");
+    m.n_expert        = (uint32_t) num("expert_count");
+
+    // Recurrent layers (Gated DeltaNet, Mamba): a fixed f32 state each,
+    // the recurrent matrix plus the convolution window.
+    const uint64_t inner = num("ssm.inner_size"), state = num("ssm.state_size");
+    if (inner && state) {
+        const uint64_t groups = num("ssm.group_count", 1), conv = num("ssm.conv_kernel", 4);
+        const uint64_t n_rec  = m.n_layer - m.n_kv_layers();
+        m.state_bytes = n_rec * (inner * state + (conv - 1) * (inner + 2 * groups * state)) * 4;
+    }
+    m.ok = m.n_layer > 0;
+    if (!m.ok) {
+        m.error = "架构缺少层数：'" + m.arch + "'";
+    }
+    return m;
+}
+
+}  // namespace
+
+ModelInfo read_model_info(const std::string & path) {
+    Reader r;
+    r.f = std::fopen(path.c_str(), "rb");
+    ModelInfo m = parse_model_info(r, path, 0);
+    m.mmproj = find_mmproj(path);
+    if (!m.mmproj.empty()) {
+        struct stat st = {};
+        m.mmproj_bytes = stat(m.mmproj.c_str(), &st) == 0 ? (uint64_t) st.st_size : 0;
+    }
+    return m;
+}
+
+ModelInfo read_model_header(const std::string & name, const std::string & head, uint64_t file_bytes) {
+    Reader r;
+    r.mem  = head.data();
+    r.size = head.size();
+    return parse_model_info(r, name, file_bytes);
+}
+
+double kv_bytes_per_token(const ModelInfo & m, const std::string & type) {
+    const double per_elem = type == "f16" ? 2.0 : type == "q8_0" ? 34.0 / 32 : 18.0 / 32;  // q4_0
+    return (double) m.n_kv_layers() * m.n_head_kv * (m.key_length + m.value_length) * per_elem;
+}
+
+// Sampling as each model's authors recommend it. Settings the planner works
+// out (context, cache type) are not here.
+const std::vector<Preset> & presets() {
+    static const std::vector<Preset> table = {
+        { "qwen3.8", "Qwen 3.8", "27B hybrid Gated DeltaNet; UD-Q2_K_XL holds 64k context on the GPU",
+          { "--temp", "0.6", "--top-p", "0.95", "--top-k", "20", "--min-p", "0" } },
+        { "qwen3.6", "Qwen 3.6", "MoE 35B-A3B or dense 27B; the MoE decodes fastest",
+          { "--temp", "0.6", "--top-p", "0.95", "--top-k", "20", "--min-p", "0" } },
+        { "qwen3.5", "Qwen 3.5", "混合架构类似 3.8；9B 用 Q4_K_M 能留出长上下文空间",
+          { "--temp", "0.6", "--top-p", "0.95", "--top-k", "20", "--min-p", "0" } },
+        { "ornith", "Ornith 1.5", "Qwen 3.5 based 9B",
+          { "--temp", "0.6", "--top-p", "0.95", "--top-k", "20", "--min-p", "0" } },
+        { "gemma", "Gemma 4", "12B at Q3_K_M / IQ4_XS, E4B at Q4_0",
+          { "--temp", "1.0", "--top-p", "0.95", "--top-k", "64" } },
+        { "gpt-oss", "gpt-oss", "20B MoE, 3.6B active; MXFP4 is its only size, so context stays short",
+          { "--temp", "1.0", "--top-p", "1.0" }, 16384 },
+        { "granite", "Granite 4.2", "3B and 8B, fast and plain",
+          { "--temp", "0.0" } },
+        { "nemotron", "Nemotron 3 Nano", "混合 Mamba，按 100 万上下文训练",
+          { "--temp", "0.6", "--top-p", "0.95" } },
+        { "mistral", "Mistral", "7B v0.3 and the Small line",
+          { "--temp", "0.15" } },
+        { "llama", "Llama 3", "8B 在任何 4bit 量化都放得下",
+          { "--temp", "0.6", "--top-p", "0.9" } },
+    };
+    return table;
+}
+
+const Preset * find_preset(const ModelInfo & m) {
+    if (!m.decision.empty()) {
+        return nullptr;  // no sampling: a decision model reads its answers off one forward pass
+    }
+    const std::string hay = lower(m.file_name + " " + m.name + " " + m.arch);
+    for (const auto & p : presets()) {
+        if (hay.find(p.match) != std::string::npos) {
+            return &p;
+        }
+    }
+    return nullptr;
+}
+
+Plan plan_model(const ModelInfo & m, double budget_gib, uint32_t ctx_cap, const char * kv_force, int np, int port) {
+    if (np < 1) {
+        np = 1;
+    }
+    Plan p;
+    const Preset * preset = find_preset(m);
+    if (preset && preset->max_ctx) {
+        ctx_cap = std::min(ctx_cap, preset->max_ctx);
+    }
+    // Decision prompts are short; 4k keeps the cache small for the wide batch below.
+    if (!m.decision.empty()) {
+        ctx_cap = std::min<uint32_t>(ctx_cap, 4096);
+    }
+    if (m.n_ctx_train) {
+        ctx_cap = std::min(ctx_cap, m.n_ctx_train);
+    }
+    p.weights_gib = (m.file_bytes + m.mmproj_bytes) / kGiB;
+    p.state_gib   = m.state_bytes / kGiB;
+    // Compute buffers and the CPU side (the title heap shares the pool), plus
+    // one prompt checkpoint of the recurrent state. Calibrated on the console:
+    // Qwen3.8-27B UD-Q2_K_XL at 64k with a q4_0 cache ran with 11.38 GiB free.
+    // ponytail: 0.25 GiB for the image encoder's buffers is a guess; measure on the console.
+    // Decision models (laya, clef, vllm-d3, lfm2-d1-omni) and non-causal image
+    // encoders (mtmd caps an image to the ubatch) need a whole prompt or image in
+    // one ubatch, so they get 2048, the size #13 ran on the console.
+    const bool wide = !m.decision.empty() || !m.mmproj.empty();
+    // shortcut: 0.5 GiB more compute buffer for the 2048 ubatch is a guess; measure on the console.
+    p.reserve_gib = 0.75 + p.state_gib + (m.mmproj.empty() ? 0.0 : 0.25) + (wide ? 0.5 : 0.0);
+
+    // The longest context first, and at each length the best cache that fits.
+    // 512/1024/2048 三档是给「自己声明上下文很短」的模型兜底的：ctx_cap 会被
+    // n_ctx_train 压下来（T5 系只有 512），档位表若没有更小的，循环一次都进不去，
+    // fits 永远是 false，界面上就成了「太大」。
+    static const uint32_t ctxs[]  = { 131072, 65536, 32768, 16384, 8192, 4096, 2048, 1024, 512 };
+    static const char *   types[] = { "f16", "q8_0", "q4_0" };
+    for (uint32_t ctx : ctxs) {
+        if (ctx > ctx_cap) {
+            continue;
+        }
+        for (const char * t : types) {
+            if (kv_force && std::strcmp(t, kv_force) != 0) {
+                continue;
+            }
+            // f16 only where it is cheap: q8_0 costs nothing measurable in quality.
+            if (!kv_force && std::strcmp(t, "f16") == 0 && ctx > 8192) {
+                continue;
+            }
+            // 并发 N 路 = N 份 KV。这是开着并发最容易 OOM 的地方，规划时必须算进来。
+            const double kv    = kv_bytes_per_token(m, t) * ctx / kGiB * (double) np;
+            const double total = p.weights_gib + kv + p.state_gib + p.reserve_gib;
+            if (total <= budget_gib) {
+                p.fits = true;
+                p.ctx = ctx;
+                p.kv_type = t;
+                p.kv_gib = kv;
+                p.total_gib = total;
+                break;
+            }
+        }
+        if (p.fits) {
+            break;
+        }
+    }
+
+    char why[160];
+    if (!p.fits) {
+        p.total_gib = p.weights_gib + p.state_gib + p.reserve_gib;
+        std::snprintf(why, sizeof(why), "needs %.1f GiB with a 4k context; %.1f GiB is free", p.total_gib, budget_gib);
+        p.why = why;
+        return p;
+    }
+    std::snprintf(why, sizeof(why), "%s%uk 上下文，%s 缓存%s：%.1f / %.1f GiB",
+                  m.decision.empty() ? "" : ("决策模型（" + m.decision + "), ").c_str(), p.ctx / 1024,
+                  p.kv_type.c_str(), m.mmproj.empty() ? "" : ", images", p.total_gib, budget_gib);
+    p.why = why;
+
+    // Threads and ubatch come from the caps layer, not from a comment written on
+    // a standard PS5. wide stays at 2048: mtmd puts a whole image in one ubatch.
+    const int threads = ps5mm::caps().threads;
+    const int ubatch  = wide ? 2048 : ps5mm::caps().ubatch;
+    p.args = { "-m", m.path, "-ngl", "999", "-fit", "off", "-lm", "none",
+               "-c", std::to_string(p.ctx), "-fa", "on", "-ctk", p.kv_type, "-ctv", p.kv_type,
+               "-b", wide ? "2048" : "256", "-ub", std::to_string(ubatch),
+               "-t", std::to_string(threads), "-np", std::to_string(np),
+               // One prompt checkpoint and no RAM cache: llama-server's defaults
+               // (32 checkpoints, 8 GiB) are for a PC, and the CPU shares this pool.
+               "-ctxcp", "1", "-cram", "0",
+               "--host", "0.0.0.0", "--port", std::to_string(port) };
+    if (!m.mmproj.empty()) {
+        p.args.insert(p.args.end(), { "--mmproj", m.mmproj });
+    }
+    if (preset) {
+        p.args.insert(p.args.end(), preset->args.begin(), preset->args.end());
+    }
+    return p;
+}
+
+// 一个文件是不是这几个引擎认的模型：文字/语音/画图/放大，四种格式。
+bool known_model_ext(const std::string & n) {
+    const std::string l = lower(n);
+    const auto ends = [&](const char * e) {
+        const size_t le = std::strlen(e);
+        return l.size() > le && l.compare(l.size() - le, le, e) == 0;
+    };
+    return ends(".gguf") || ends(".safetensors") || ends(".pth") || ends(".ckpt");
+}
+
+std::vector<std::string> find_models(const std::vector<std::string> & dirs, bool include_projectors) {
+    std::vector<std::string> out;
+    for (const auto & d : dirs) {
+        DIR * dir = opendir(d.c_str());
+        if (!dir) {
+            continue;
+        }
+        while (dirent * e = readdir(dir)) {
+            const std::string n = e->d_name;
+            if (n.empty() || n[0] == '.' || !known_model_ext(n)) {
+                continue;
+            }
+            // Split models: only the first part, which llama.cpp opens.
+            const auto split = n.find("-of-");
+            if (split != std::string::npos && n.find("-00001-of-") == std::string::npos) {
+                continue;
+            }
+            // Vision/audio projectors are not models on their own.
+            if (!include_projectors && lower(n).find("mmproj") != std::string::npos) {
+                continue;
+            }
+            out.push_back(d + "/" + n);
+        }
+        closedir(dir);
+    }
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
+// 看文件头判断它该归哪个引擎。GGUF 读 general.architecture，别的看扩展名和名字。
+// 这不是猜：architecture 是模型自己写下的，sd.cpp 也按它认 Wan / SDXL / Flux。
+std::string model_kind(const std::string & path) {
+    const std::string l = lower(path);
+    const auto ends = [&](const char * e) {
+        const size_t le = std::strlen(e);
+        return l.size() > le && l.compare(l.size() - le, le, e) == 0;
+    };
+    if (l.find("mmproj") != std::string::npos) {
+        return "projector";
+    }
+    if (ends(".pth") || l.find("esrgan") != std::string::npos || l.find("4x") != std::string::npos) {
+        return "upscaler";
+    }
+    if (ends(".safetensors") || ends(".ckpt")) {
+        // VAE 是单独的权重档，名字里通常带 vae
+        if (l.find("vae") != std::string::npos) {
+            return "vae";
+        }
+        return "picture";
+    }
+    // GGUF: 读头里的 general.architecture
+    FILE * f = std::fopen(path.c_str(), "rb");
+    if (f == nullptr) {
+        return "text";
+    }
+    unsigned char head[4] = { 0, 0, 0, 0 };
+    if (std::fread(head, 1, 4, f) != 4 || head[0] != 'G' || head[1] != 'G' || head[2] != 'U' || head[3] != 'F') {
+        std::fclose(f);
+        return "text";
+    }
+    // version(4) tensor_count(8) kv_count(8) then key/value pairs
+    unsigned char buf[8];
+    if (std::fread(buf, 1, 4, f) != 4) {
+        std::fclose(f);
+        return "text";
+    }
+    if (std::fread(buf, 1, 8, f) != 8 || std::fread(buf, 1, 8, f) != 8) {
+        std::fclose(f);
+        return "text";
+    }
+    std::string arch, decision;
+    for (int i = 0; i < 96; ++i) {
+        unsigned char len8[8];
+        if (std::fread(len8, 1, 8, f) != 8) {
+            break;
+        }
+        uint64_t klen = 0;
+        for (int b = 0; b < 8; ++b) {
+            klen |= (uint64_t) len8[b] << (8 * b);
+        }
+        if (klen > 256) {
+            break;
+        }
+        std::string key(klen, '\0');
+        if (std::fread(key.data(), 1, klen, f) != klen) {
+            break;
+        }
+        unsigned char vt[4];
+        if (std::fread(vt, 1, 4, f) != 4) {
+            break;
+        }
+        const uint32_t type = (uint32_t) vt[0] | (uint32_t) vt[1] << 8 | (uint32_t) vt[2] << 16 | (uint32_t) vt[3] << 24;
+        // 每种标量的字节数：原来一律按 8 读，u32 只有 4，一错位后面全乱
+        const auto scalar_size_of = [](uint32_t t) -> long {
+            switch (t) {
+                case 0: case 1: case 7: return 1;                  // u8  i8  bool
+                case 2: case 3: return 2;                          // u16 i16
+                case 4: case 5: case 6: return 4;                  // u32 i32 f32
+                case 10: case 11: case 12: return 8;               // u64 i64 f64
+                default: return 0;
+            }
+        };
+        if (type == 8) {   // string
+            unsigned char sl8[8];
+            if (std::fread(sl8, 1, 8, f) != 8) {
+                break;
+            }
+            uint64_t slen = 0;
+            for (int b = 0; b < 8; ++b) {
+                slen |= (uint64_t) sl8[b] << (8 * b);
+            }
+            if (slen > 4096) {
+                break;
+            }
+            std::string val(slen, '\0');
+            if (std::fread(val.data(), 1, slen, f) != slen) {
+                break;
+            }
+            if (key == "general.architecture") {
+                arch = val;
+            }
+            // "<arch>.decision.type"：决策模型的记号（openjev / clef / lfm2-d1 ...）
+            if (key.size() > 14 && key.compare(key.size() - 14, 14, ".decision.type") == 0) {
+                decision = val;
+            }
+        } else if (type == 9) {   // array
+            unsigned char at[4], nb[8];
+            if (std::fread(at, 1, 4, f) != 4 || std::fread(nb, 1, 8, f) != 8) {
+                break;
+            }
+            const uint32_t et = (uint32_t) at[0] | (uint32_t) at[1] << 8 | (uint32_t) at[2] << 16 | (uint32_t) at[3] << 24;
+            uint64_t n = 0;
+            for (int b = 0; b < 8; ++b) {
+                n |= (uint64_t) nb[b] << (8 * b);
+            }
+            // 字符串数组（词表）和嵌套数组不追：decision.type 早在它们前面
+            if (et == 8 || et == 9) {
+                break;
+            }
+            const long esz = scalar_size_of(et);
+            if (esz == 0) {
+                break;
+            }
+            if (std::fseek(f, (long) (esz * (long) n), SEEK_CUR) != 0) {
+                break;
+            }
+        } else {
+            const long sz = scalar_size_of(type);
+            if (sz == 0 || std::fseek(f, sz, SEEK_CUR) != 0) {
+                break;
+            }
+        }
+        if (!arch.empty() && !decision.empty()) {
+            break;   // 两样都拿到了，不用再往下扫
+        }
+    }
+    std::fclose(f);
+
+    // 决策模型：一次前向出一句答案（/v1/systemone 那套），本身仍是 llama.cpp 跑的
+    // 文字模型，所以不单开引擎 —— 只是模型库和设置页要认得出它。
+    if (!decision.empty()) {
+        return "decision";
+    }
+    const std::string a = lower(arch);
+    if (a.empty()) {
+        return "text";
+    }
+    if (a.find("tts") != std::string::npos) {
+        return "speech";
+    }
+    // 文本编码器（T5/UMT5/CLIP）：给画图引擎当配件，不是能单独聊天的模型
+    if (a == "t5" || a == "umt5" || a.find("t5") == 0 || a.find("clip") != std::string::npos) {
+        return "text-encoder";
+    }
+    if (a.find("wan") != std::string::npos) {
+        return "video";
+    }
+    if (a.find("sd") == 0 || a.find("stable-diffusion") != std::string::npos || a.find("flux") != std::string::npos ||
+        a.find("qwen_image") != std::string::npos || a.find("chroma") != std::string::npos) {
+        return "picture";
+    }
+    return "text";
+}
+
+}  // namespace ps5lm

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- PS5MM's icon: the five-stroke spectrum mark. Each stroke is one engine
+       slot, in its modality colour: text, picture, speech, video, and the
+       grey reserved fifth. The brand mark is the cluster's live state.
+       Palette from the TV UI: graphite #0e0e11, ink #f2f1ec, modalities
+       #5b7cff / #a78bfa / #2dd4bf / #e4539e.
+       Fonts: "PS5LM Mono" is site/assets/fonts/recursive-mono-v1 at weight 800. -->
+  <rect width="512" height="512" fill="#0e0e11"/>
+  <g>
+    <rect x="82"  y="68"  width="44" height="240" rx="22" fill="#5b7cff"/>
+    <rect x="158" y="176" width="44" height="132" rx="22" fill="#a78bfa"/>
+    <rect x="234" y="109" width="44" height="199" rx="22" fill="#2dd4bf"/>
+    <rect x="310" y="176" width="44" height="132" rx="22" fill="#e4539e"/>
+    <rect x="386" y="68"  width="44" height="240" rx="22" fill="#6a6a66"/>
+  </g>
+  <text x="256" y="428" font-family="PS5LM Mono" font-weight="800" font-size="84" fill="#f2f1ec" text-anchor="middle" letter-spacing="2">PS5MM</text>
+</svg>

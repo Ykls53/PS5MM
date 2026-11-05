@@ -1,0 +1,177 @@
+file,en,zh
+dashboard.cpp,Unload and download,卸载并下载
+dashboard.cpp,Unload,卸载
+dashboard.cpp,"M.2 drive, not found","M.2 硬盘，未找到"
+dashboard.cpp,"USB drive, not found","USB 硬盘，未找到"
+dashboard.cpp,Interface sounds on the TV,电视上的界面音效
+dashboard.cpp,"Internal storage, or PS5LM/models on an M.2 or USB drive","内置存储，或 M.2／USB 硬盘上的 PS5LM/models"
+dashboard.cpp,Unload the model first?,先卸载模型？
+dashboard.cpp,GPU busy,GPU 占用中
+dashboard.cpp,Home,主页
+dashboard.cpp,Up %.0f min,已运行 %.0f 分钟
+dashboard.cpp,Try again,重试
+dashboard.cpp,Up %.1f h,已运行 %.1f 小时
+dashboard.cpp,Load,加载
+dashboard.cpp,Last 2 minutes,最近 2 分钟
+dashboard.cpp,Last hour,最近 1 小时
+dashboard.cpp,Load a model at launch,启动时加载模型
+dashboard.cpp,Logits and activations API,Logits 与激活值 API
+dashboard.cpp,Longest context,最长上下文
+dashboard.cpp,Loading,加载中
+dashboard.cpp,It fits on ,可放入 
+dashboard.cpp,It runs on the PS5's GPU and answers every device on your network.,它跑在 PS5 的 GPU 上，回答局域网里每台设备的请求。
+dashboard.cpp,Try it,试一试
+dashboard.cpp,Keep it loaded,保留在内存
+dashboard.cpp,Language model,语言模型
+dashboard.cpp,"Language, images","语言、图像"
+dashboard.cpp,Low ,低 
+dashboard.cpp,Language,语言
+dashboard.cpp,Error %.0f,错误 %.0f
+dashboard.cpp,Energy since start,启动以来耗电
+dashboard.cpp,"With elfldr running, the app loads ps5-exporter to read it",elfldr 在跑时，app 会加载 ps5-exporter 来读取
+dashboard.cpp,Errors and warnings only,仅错误和警告
+dashboard.cpp,Warn above,超过提醒
+dashboard.cpp,Every line,全部
+dashboard.cpp,Errors only,仅错误
+dashboard.cpp,Decision model,决策模型
+dashboard.cpp,Deletes everything the chat's tools wrote,删除聊天工具写入的全部内容
+dashboard.cpp,Deciding,判断中
+dashboard.cpp,Decision,决策
+dashboard.cpp,Demo,示例
+dashboard.cpp,Download,下载
+dashboard.cpp,Downloads,下载
+dashboard.cpp,Developer,开发者
+dashboard.cpp,Diagnostics,诊断
+dashboard.cpp,Wait for a choice,等待选择
+dashboard.cpp,Generating,生成中
+dashboard.cpp,Waiting,等待中
+dashboard.cpp,"Get one from Suggested, or copy a .gguf to /data/PS5LM/models.","从「推荐」下一个，或把 .gguf 复制到 /data/PS5LM/models。"
+dashboard.cpp,"Yes, delete it","是，删除"
+dashboard.cpp,"Full quality, the most memory","完整精度，占内存最多"
+dashboard.cpp,Fan,风扇
+dashboard.cpp,Fits,可放入
+dashboard.cpp,File tools,文件工具
+dashboard.cpp,The loaded model,已加载的模型
+dashboard.cpp,Requests,请求
+dashboard.cpp,Reading its header,读取文件头
+dashboard.cpp,Ready or loading,就绪或加载中
+dashboard.cpp,"Requests from other devices appear here, as a chat.",其他设备的请求会以对话形式显示在这里。
+dashboard.cpp,Running,运行中
+dashboard.cpp,Save downloads to,下载保存到
+dashboard.cpp,Resume,继续
+dashboard.cpp,The first point comes after 30 seconds,30 秒后出现第一个点
+dashboard.cpp,Range,范围
+dashboard.cpp,Preparing the context,准备上下文
+dashboard.cpp,"The longest that fits, up to this; applies at the next load",能放下的最长值，上限在此；下次加载生效
+dashboard.cpp,Save it there,保存到那里
+dashboard.cpp,Starting,启动中
+dashboard.cpp,Startup,启动
+dashboard.cpp,Square checks whether it fits,□ 键检查能否放下
+dashboard.cpp,"Square sends a demo, Triangle a message of your own.",□ 键发示例，△ 键发自己的话。
+dashboard.cpp,Text to decide on,待判断的文本
+dashboard.cpp,Switch,切换
+dashboard.cpp,Temperature,温度
+dashboard.cpp,Stopped,已停止
+dashboard.cpp,Suggested,推荐
+dashboard.cpp,Sound and storage,音效与存储
+dashboard.cpp,The browser chat may read and write files in /data/PS5LM/scratch,浏览器聊天可在 /data/PS5LM/scratch 读写文件
+dashboard.cpp,Search,搜索
+dashboard.cpp,The download is faster with the memory free. The model can load again after.,释放内存后下载更快，之后可以再加载模型。
+dashboard.cpp,Scroll,滚动
+dashboard.cpp,The best that fits,能放下的最佳值
+dashboard.cpp,Settings,设置
+dashboard.cpp,SoC sensors,SoC 传感器
+dashboard.cpp,Server,服务器
+dashboard.cpp,Server log,服务器日志
+dashboard.cpp,This PS5,本机
+dashboard.cpp,No downloads,没有下载
+dashboard.cpp,No drive has room for it. Free some space and try again.,没有硬盘放得下。清点空间再试。
+dashboard.cpp,"Near full quality, half the memory",接近完整精度，内存减半
+dashboard.cpp,No models yet,还没有模型
+dashboard.cpp,Not read,未读取
+dashboard.cpp,Nothing here yet,这里还空着
+dashboard.cpp,None,无
+dashboard.cpp,Not enough space there,那里空间不够
+dashboard.cpp,ms per decision,毫秒/次决策
+dashboard.cpp,Too big,太大
+dashboard.cpp,Missing,缺失
+dashboard.cpp,Memory,内存
+dashboard.cpp,Message,消息
+dashboard.cpp,Models,模型
+dashboard.cpp,Models you get from Suggested or Search wait here until they are saved.,从「推荐」或「搜索」得到的模型会先在这里等，直到保存。
+dashboard.cpp,Model,模型
+dashboard.cpp,Model to load,要加载的模型
+dashboard.cpp,Nothing is loaded,没有加载模型
+dashboard.cpp,Pause,暂停
+dashboard.cpp,Paused,已暂停
+dashboard.cpp,OpenAI SDKs:,OpenAI SDK：
+dashboard.cpp,Pages,页面
+dashboard.cpp,Power,功耗
+dashboard.cpp,Plain text completion,纯文本补全
+dashboard.cpp,Popular,热门
+dashboard.cpp,"OpenAI chat, streaming and tools",OpenAI 聊天、流式与工具
+dashboard.cpp,"tokens per second, last reply",token/秒，上次回复
+dashboard.cpp,tokens per second,token/秒
+dashboard.cpp,Now,现在
+dashboard.cpp,Off: /v1/introspect is closed. On: the raw numbers. A change restarts the model,关：/v1/introspect 关闭。开：输出原始数值。改动会重启模型
+dashboard.cpp,Off: the app opens and waits for a choice,关：app 启动后等待选择
+dashboard.cpp,On your network,局域网
+dashboard.cpp,One of the models on this PS5,本机上的某个模型
+dashboard.cpp,Ollaya and TypeSafe clients:,Ollaya 与 TypeSafe 客户端：
+dashboard.cpp,On this PS5,本机模型
+dashboard.cpp,", %.0f ms per decision","，%.0f 毫秒/次决策"
+dashboard.cpp,", starting","，启动中"
+dashboard.cpp,", waiting its turn","，排队等候"
+dashboard.cpp,Ask anything,问点什么
+dashboard.cpp,App log,app 日志
+dashboard.cpp,Base address,基址
+dashboard.cpp,Auto picks the best that fits; a fixed type trades length for quality,自动挑能放下的最佳；固定类型用长度换质量
+dashboard.cpp,Back,返回
+dashboard.cpp,A quarter of the memory,四分之一内存
+dashboard.cpp,A notification when that folder grows past this,该目录超过这个大小就发通知
+dashboard.cpp,"Any device on this network can call it, with any model name: the loaded one answers.","局域网内任何设备都能调用，模型名随意：由已加载的模型回答。"
+dashboard.cpp,"Anthropic Messages, for Claude Code and its SDKs","Anthropic Messages，供 Claude Code 及其 SDK 使用"
+dashboard.cpp,All lines,全部
+dashboard.cpp,Answering,回答中
+dashboard.cpp,"    Average ",    平均 
+dashboard.cpp,"    High ",    高 
+dashboard.cpp,%.0fk tokens,%.0fk token
+dashboard.cpp,%.0fk context,%.0fk 上下文
+dashboard.cpp,% on the GPU,% 在 GPU 上
+dashboard.cpp," tokens in", token 输入
+dashboard.cpp,%.0f GB free,%.0f GB 可用
+dashboard.cpp,%.0f models on this PS5,本机 %.0f 个模型
+dashboard.cpp,Clear the scratch folder,清空 scratch 目录
+dashboard.cpp,CPU use,CPU 占用
+dashboard.cpp,CPU clock,CPU 频率
+dashboard.cpp,Cancel,取消
+dashboard.cpp,Change,更改
+dashboard.cpp,Change model,更换模型
+dashboard.cpp,Check fit,检查适配
+dashboard.cpp,Context cache,上下文缓存
+dashboard.cpp,Context,上下文
+dashboard.cpp,Console,控制台
+dashboard.cpp,Chat,聊天
+dashboard.cpp,Copying the weights into GPU memory,正在把权重拷进 GPU 内存
+dashboard.cpp,Clear,清除
+dashboard.cpp,Claude Code:,Claude Code：
+dashboard.cpp,Choose a model,选择模型
+dashboard.cpp,Choose,选择
+dashboard.cpp,I was charged twice this month. Refund me or I cancel.,这个月被扣了两次费。退钱，不然我退订。
+dashboard.cpp,"Love the new update, everything is so much faster now!",新版太棒了，一切都快多了！
+dashboard.cpp,Where can I find the invoice for last month?,上个月的发票在哪看？
+dashboard.cpp,"In two sentences, how can a PS5 run a language model?",两句话说明 PS5 怎么跑语言模型？
+dashboard.cpp,What is 17 times 23? Show the steps in one line.,17 乘 23 是多少？一行里给出步骤。
+dashboard.cpp,Write a haiku about a game console that dreams in tokens.,写一首俳句：一台用 token 做梦的游戏机。
+dashboard.cpp,Give me three names for a home AI server that lives under the TV.,给住在电视下面的家用 AI 服务器起三个名字。
+dashboard.cpp,Third time asking. Cancel my subscription today.,第三次问了。今天就退订。
+dashboard.cpp,"TypeSafe decisions: choice, score and yes-or-no questions","TypeSafe 决策：选择、打分与是非题"
+
+suggested.hpp,"The strongest model that fits, with a 64k context","能放下的最强模型，64k 上下文"
+suggested.hpp,Fast all-rounder that leaves room for long chats,"全能又快，留足长对话空间"
+suggested.hpp,"Reads images, quick replies","能看图，回复快"
+suggested.hpp,"Small and very fast, reads images","又小又快，能看图"
+suggested.hpp,"Tiny and instant, for simple tasks","迷你极速，适合简单任务"
+suggested.hpp,"Decisions about text, images and sound in a fraction of a second","文本、图像、声音的判断，零点几秒出结果"
+suggested.hpp,Sharper decisions about text and images,"文本和图像的判断更准"
+suggested.hpp,Answers every question of a request together,"一次请求里的所有问题一起回答"

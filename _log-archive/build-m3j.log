@@ -1,0 +1,35 @@
+[0/2] Re-checking globbed directories...
+[1/9] Performing build step for 'vulkan-shaders-gen'
+ninja: no work to do.
+[2/9] Performing install step for 'vulkan-shaders-gen'
+-- Up-to-date: /home/yk/PS5MM/build/app-ps5/llama/Release/./vulkan-shaders-gen
+[3/9] Completed 'vulkan-shaders-gen'
+[4/9] Provisioning UI assets
+-- UI: downloading from b11608: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b11608/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from b11608 failed: "Timeout was reached"
+-- UI: downloading from latest: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/latest/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from latest failed: "Timeout was reached"
+-- UI: HF download failed
+CMake Warning at /home/yk/PS5MM/third_party/llama.cpp/scripts/ui-assets.cmake:584 (message):
+  UI: no assets available - building without an embedded UI.  In a
+  disconnected environment, download the pre-built UI from a llama.cpp
+  release at https://github.com/ggml-org/llama.cpp/releases and extract to
+  tools/ui/dist.
+
+
+-- UI: assets unchanged, skipping embedding
+[0/2] Re-checking globbed directories...
+[1/4] Performing build step for 'vulkan-shaders-gen'
+ninja: no work to do.
+[2/4] Performing install step for 'vulkan-shaders-gen'
+-- Up-to-date: /home/yk/PS5MM/build/app-ps5/sd/Release/./vulkan-shaders-gen
+[3/4] Completed 'vulkan-shaders-gen'
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/tools/radv-link.sh: line 20: /home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp: Permission denied
+mv: cannot stat '/home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp': No such file or directory
+prefix-sd: 18667 names get SDX_
+prefix-sd: 6 prefixed archives ready
+wrote 181023536 bytes: /home/yk/PS5MM/build/app-ps5/eboot.elf
+sha256 d698cc43298f852e64e0f02ea81c6da6858c11678e2f01e37733110040e924f5
+wrote 179597784 bytes: /home/yk/PS5MM/build/app-ps5/title/PPSA99577/eboot.bin
+sha256 0138a86f054e43db787cb386621a99b51d60745db47a4403819a44ab8f5e65fa
+build-app: /home/yk/PS5MM/build/app-ps5/title/PPSA99577 (179597784 bytes)

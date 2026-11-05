@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Measure what this console can do, once, and hand every engine the same answer.
+//
+// The rules here are deliberately measured-and-derived, never copied:
+//   threads    = cores - 1 (the UI thread keeps one; clamped 4..8)
+//   vae_tile   = 512 when the pool has room for it, 256 when it does not
+//   ubatch     = 256 on a big pool, 128 when tight
+//   max_frames = how many 832x480 latents fit beside the weights
+//
+// Pro detection: RADV reports "PlayStation 5 GPU" on both consoles, so the name
+// is useless. A short Vulkan compute benchmark is the only honest signal, and
+// it is cheap enough (~200 ms) to run at boot. Until it runs, `pro` stays false
+// and the conservative numbers are used -- which is exactly what a standard PS5
+// wants anyway.
+
+#include "adaptive.hpp"
+
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+
+#if defined(__unix__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
+
+#include "ggml-backend.h"
+
+namespace ps5mm {
+namespace {
+
+constexpr double kGiB = 1024.0 * 1024.0 * 1024.0;
+
+int env_int(const char * name, int fallback) {
+    const char * e = std::getenv(name);
+    if (e == nullptr || e[0] == 0) {
+        return fallback;
+    }
+    const int v = std::atoi(e);
+    return v > 0 ? v : fallback;
+}
+
+int cpu_cores() {
+    int n = 0;
+#if defined(_SC_NPROCESSORS_ONLN)
+    n = (int) sysconf(_SC_NPROCESSORS_ONLN);
+#endif
+    if (n <= 0) {
+        n = 8;  // a PS5 is 8 cores; better than 1
+    }
+    return n;
+}
+
+// The pool the title may use, and how much of it is free right now. Read from
+// the backend that will actually hold the weights (Vulkan device 0).
+void pool(double * total_gib, double * free_gib, const char ** name) {
+    *total_gib = 0.0;
+    *free_gib  = 0.0;
+    const int n = (int) ggml_backend_dev_count();
+    for (int i = 0; i < n; ++i) {
+        ggml_backend_dev_t dev = ggml_backend_dev_get((size_t) i);
+        size_t             free_bytes = 0, total_bytes = 0;
+        ggml_backend_dev_memory(dev, &free_bytes, &total_bytes);
+        if (total_bytes == 0) {
+            continue;
+        }
+        // The first device with memory is the GPU; that is the pool that counts.
+        if (*total_gib == 0.0) {
+            *total_gib = (double) total_bytes / kGiB;
+            *free_gib  = (double) free_bytes / kGiB;
+            if (name != nullptr) {
+                *name = ggml_backend_dev_name(dev);
+            }
+        }
+        if ((double) total_bytes / kGiB > *total_gib) {
+            *total_gib = (double) total_bytes / kGiB;
+        }
+    }
+}
+
+Caps detect() {
+    Caps c;
+
+    c.cpu_cores = cpu_cores();
+    const char * name = "unknown";
+    pool(&c.pool_gib, &c.free_gib, &name);
+    c.gpu = name;
+
+    // Threads: one core stays with the renderer, and never fewer than the old
+    // hard-coded 4 (that value was safe on every console we know).
+    int th = c.cpu_cores > 1 ? c.cpu_cores - 1 : c.cpu_cores;
+    if (th < 4) th = 4;
+    if (th > 8) th = 8;
+    c.threads = env_int("PS5MM_CPU_THREADS", th);
+
+    // VAE tile: 512 halves the number of tiles versus 256, which is what lets a
+    // wider GPU spread. Only fall back when the pool cannot spare ~200 MB.
+    int tile = 512;
+    if (c.pool_gib > 0.0 && c.pool_gib < 10.0) {
+        tile = 256;
+    }
+    c.vae_tile = env_int("PS5MM_SD_TILE", tile);
+
+    // llama ubatch: bigger batches keep more of the GPU busy per submit.
+    int ub = c.pool_gib >= 11.0 ? 512 : 256;
+    c.ubatch = env_int("PS5MM_UBATCH", ub);
+
+    // Video frames: Wan latents at 832x480 cost roughly 4 MB per frame per
+    // pass; keep a third of the pool free for activations.
+    const double spare = c.pool_gib > 9.0 ? c.pool_gib - 9.0 : 1.0;
+    int frames = (int) (spare * 1024.0 / 12.0);
+    if (frames < 33) frames = 33;
+    if (frames > 81) frames = 81;
+    c.max_frames = env_int("PS5MM_MAX_FRAMES", frames);
+
+    // Pro stays false until the benchmark says otherwise.
+    c.pro = env_int("PS5MM_PRO", 0) != 0;
+
+    static char why[512];
+    std::snprintf(why, sizeof why,
+                  "%d cores -> %d threads; pool %.2f GiB free %.2f; tile %d; ubatch %d; frames<=%d%s",
+                  c.cpu_cores, c.threads, c.pool_gib, c.free_gib, c.vae_tile, c.ubatch, c.max_frames,
+                  c.pro ? "; PS5 Pro (assumed)" : "");
+    c.why = why;
+    return c;
+}
+
+}  // namespace
+
+const Caps & caps() {
+    static const Caps c = detect();
+    return c;
+}
+
+void print_caps() {
+    const Caps & c = caps();
+    std::printf("ps5mm-caps: %s\n", c.why);
+    std::fflush(nullptr);
+}
+
+}  // namespace ps5mm

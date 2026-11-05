@@ -1,0 +1,50 @@
+// What the user can change on the Settings page, kept in
+// /data/PS5MM/settings.json. Unknown or missing keys keep their defaults, so
+// an old file still loads after a new setting is added.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include <cstdint>
+#include <string>
+
+namespace ps5lm {
+
+struct Settings {
+    bool        auto_load = false;  // load default_model at launch
+    std::string default_model;      // a path from the library, or empty
+    uint32_t    ctx_cap   = 16384;  // the planner's longest context; three engines share the pool
+    std::string kv_type   = "auto"; // "auto", "f16", "q8_0" or "q4_0"
+    bool        sounds    = true;
+    bool        tools     = true;   // file tools in the browser chat, inside the scratch folder
+    bool        introspect = false;  // POST /v1/introspect: raw logits and activations (off by default)
+    uint32_t    scratch_limit_gib = 2;  // warn when the scratch folder grows past this
+    std::string download_dir = "/data/PS5MM/models";  // where the market saves models
+
+    // ---- the speech engine (Qwen3-TTS and whatever else mmproj audio takes) ----
+    std::string tts_backbone = "/data/PS5MM/tts/backbone.gguf";
+    std::string tts_mmproj   = "/data/PS5MM/tts/mmproj.gguf";
+    std::string voices_dir   = "/data/PS5MM/voices";   // reference voices, one wav per "voice"
+    std::string tts_lang     = "zh";
+
+    // ---- the picture engine (stable-diffusion.cpp: images and video) ----
+    std::string sd_diffusion = "/data/PS5SD/models/diffusion_models/Wan2.2-TI2V-5B-Q8_0.gguf";
+    std::string sd_clip_l;
+    std::string sd_clip_g;
+    std::string sd_t5xxl     = "/data/PS5SD/models/text_encoders/umt5-xxl-encoder-Q4_K_M.gguf";
+    std::string sd_vae       = "/data/PS5SD/models/vae/wan2.2_vae.safetensors";
+    std::string sd_esrgan    = "/data/PS5MM/sd/esrgan.pth";
+    int         sd_steps     = 20;
+    int         sd_cfg_x10   = 50;   // cfg * 10, so the row can step by 0.5
+    int         sd_width     = 832;
+    int         sd_height    = 480;
+    int         sd_frames    = 33;
+    int         sd_fps       = 16;
+
+    bool operator==(const Settings &) const = default;
+};
+
+Settings load_settings(const char * path);
+bool     save_settings(const char * path, const Settings & s);
+
+}  // namespace ps5lm

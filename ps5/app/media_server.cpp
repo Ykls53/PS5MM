@@ -1,0 +1,388 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// PS5MM's media engine: FFmpeg, hung under the picture engine's port.
+//
+// Why it lives here: every video feature the app has (sd.cpp's output, a
+// future interpolator, frame extraction) needs demuxing, decoding and PNG
+// encoding. Those are FFmpeg's job, and PS5MM already links four ggmls --
+// adding a fifth engine on its own port would waste a slot on something that
+// holds no model.
+//
+// Routes:
+//   GET  /media/v1/info      -> {"ffmpeg": "...", "avcodec": ..., "config": "..."}
+//   POST /media/v1/frames    -> {"video": <base64 mp4/mkv/webm>, "count": N, "png": true}
+//                               -> {"w":..,"h":..,"fps":..,"frames":[{"t":sec,"png":b64}]}
+
+#include "media_server.hpp"
+
+#include "adaptive.hpp"
+
+#include "cpp-httplib/httplib.h"
+#include "nlohmann/json.hpp"
+
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <vector>
+
+extern "C" {
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libavutil/avutil.h"
+#include "libavutil/imgutils.h"
+#include "libswscale/swscale.h"
+}
+
+namespace {
+
+using json = nlohmann::json;
+
+constexpr const char * kStageDir = "/data/PS5MM/scratch";
+
+std::string b64_decode(const std::string & b64) {
+    std::string raw;
+    raw.reserve(b64.size() * 3 / 4 + 3);
+    unsigned acc = 0;
+    int      bits = 0;
+    for (char c : b64) {
+        int v = -1;
+        if (c >= 'A' && c <= 'Z') v = c - 'A';
+        else if (c >= 'a' && c <= 'z') v = c - 'a' + 26;
+        else if (c >= '0' && c <= '9') v = c - '0' + 52;
+        else if (c == '+') v = 62;
+        else if (c == '/') v = 63;
+        else continue;
+        acc = (acc << 6) | (unsigned) v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            raw.push_back((char) ((acc >> bits) & 0xFF));
+        }
+    }
+    return raw;
+}
+
+std::string b64_encode(const unsigned char * p, size_t n) {
+    static const char * t = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    out.reserve((n + 2) / 3 * 4);
+    for (size_t i = 0; i < n; i += 3) {
+        const unsigned v = (unsigned) p[i] << 16 |
+                           (i + 1 < n ? (unsigned) p[i + 1] << 8 : 0u) |
+                           (i + 2 < n ? (unsigned) p[i + 2] : 0u);
+        out.push_back(t[(v >> 18) & 63]);
+        out.push_back(t[(v >> 12) & 63]);
+        out.push_back(i + 1 < n ? t[(v >> 6) & 63] : '=');
+        out.push_back(i + 2 < n ? t[v & 63] : '=');
+    }
+    return out;
+}
+
+// One decoded frame -> PNG bytes, via libavcodec's own png encoder.
+bool frame_to_png(AVFrame * src, const AVCodec * enc, const std::string & out_path) {
+    if (enc == nullptr || src == nullptr) {
+        return false;
+    }
+
+    // PNG wants packed RGB24; mjpeg wants YUVJ420P. Pick by encoder id so the
+    // default path never touches zlib (png's deflate goes through RADV's
+    // bundled copy, which segfaults here -- see the handover notes).
+    const bool          is_png   = (enc->id == AV_CODEC_ID_PNG);
+    const AVPixelFormat want_fmt = is_png ? AV_PIX_FMT_RGB24 : AV_PIX_FMT_YUVJ420P;
+
+    AVFrame * rgb = av_frame_alloc();
+    if (rgb == nullptr) {
+        return false;
+    }
+    rgb->format = want_fmt;
+    rgb->width  = src->width;
+    rgb->height = src->height;
+    if (av_frame_get_buffer(rgb, 32) < 0) {
+        av_frame_free(&rgb);
+        return false;
+    }
+
+    SwsContext * sws = sws_getContext(src->width, src->height, (AVPixelFormat) src->format,
+                                      src->width, src->height, want_fmt,
+                                      SWS_BILINEAR, nullptr, nullptr, nullptr);
+    if (sws == nullptr) {
+        av_frame_free(&rgb);
+        return false;
+    }
+    sws_scale(sws, src->data, src->linesize, 0, src->height, rgb->data, rgb->linesize);
+    sws_freeContext(sws);
+
+    AVCodecContext * cctx = avcodec_alloc_context3(enc);
+    if (cctx == nullptr) {
+        av_frame_free(&rgb);
+        return false;
+    }
+    cctx->width     = rgb->width;
+    cctx->height    = rgb->height;
+    cctx->pix_fmt   = want_fmt;
+    cctx->time_base = AVRational{ 1, 1 };
+    if (!is_png) {
+        cctx->color_range = AVCOL_RANGE_JPEG;   // YUVJ420P implies full range
+    }
+
+    if (avcodec_open2(cctx, enc, nullptr) < 0) {
+        avcodec_free_context(&cctx);
+        av_frame_free(&rgb);
+        return false;
+    }
+
+    bool ok = false;
+    if (avcodec_send_frame(cctx, rgb) == 0) {
+        AVPacket * pkt = av_packet_alloc();
+        if (pkt != nullptr && avcodec_receive_packet(cctx, pkt) == 0) {
+            FILE * f = std::fopen(out_path.c_str(), "wb");
+            if (f != nullptr) {
+                std::fwrite(pkt->data, 1, (size_t) pkt->size, f);
+                std::fclose(f);
+                ok = true;
+            }
+            av_packet_free(&pkt);
+        }
+    }
+
+    avcodec_free_context(&cctx);
+    av_frame_free(&rgb);
+    return ok;
+}
+
+bool read_file(const std::string & path, std::string & out) {
+    FILE * f = std::fopen(path.c_str(), "rb");
+    if (f == nullptr) {
+        return false;
+    }
+    std::fseek(f, 0, SEEK_END);
+    const long n = std::ftell(f);
+    std::fseek(f, 0, SEEK_SET);
+    out.resize((size_t) n);
+    const size_t got = std::fread(out.data(), 1, out.size(), f);
+    std::fclose(f);
+    out.resize(got);
+    return got > 0;
+}
+
+void on_info(const httplib::Request &, httplib::Response & res) {
+    json out{
+        { "ok", true },
+        { "engine", "media" },
+        { "ffmpeg", av_version_info() },
+        { "avcodec", avcodec_version() },
+        { "avformat", avformat_version() },
+        { "swscale", swscale_version() },
+        { "png_encoder", avcodec_find_encoder(AV_CODEC_ID_PNG) != nullptr },
+        { "h264_decoder", avcodec_find_decoder(AV_CODEC_ID_H264) != nullptr },
+    };
+    res.set_content(out.dump(), "application/json");
+}
+
+void on_frames(const httplib::Request & req, httplib::Response & res) {
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const std::exception & e) {
+        res.status = 400;
+        res.set_content(json{ { "error", std::string("bad JSON: ") + e.what() } }.dump(), "application/json");
+        return;
+    }
+    const std::string b64 = body.value("video", std::string());
+    if (b64.empty()) {
+        res.status = 400;
+        res.set_content(json{ { "error", "give video (base64 mp4/mkv/webm)" } }.dump(), "application/json");
+        return;
+    }
+    int want = body.value("count", 4);
+    if (want < 1) want = 1;
+    if (want > 32) want = 32;
+
+    const std::string raw = b64_decode(b64);
+    std::printf("ps5mm-media[frames]: 1 decode b64 -> %zu bytes\n", raw.size());
+    std::fflush(nullptr);
+    if (raw.empty()) {
+        res.status = 400;
+        res.set_content(json{ { "error", "the video decoded to nothing" } }.dump(), "application/json");
+        return;
+    }
+
+    const std::string in_path = std::string(kStageDir) + "/media-in.bin";
+    {
+        FILE * f = std::fopen(in_path.c_str(), "wb");
+        if (f == nullptr) {
+            res.status = 500;
+            res.set_content(json{ { "error", "could not stage the file" } }.dump(), "application/json");
+            return;
+        }
+        std::fwrite(raw.data(), 1, raw.size(), f);
+        std::fclose(f);
+    }
+
+    std::printf("ps5mm-media[frames]: 2 staged %s\n", in_path.c_str());
+    std::fflush(nullptr);
+    AVFormatContext * fmt = nullptr;
+    if (avformat_open_input(&fmt, in_path.c_str(), nullptr, nullptr) < 0) {
+        std::remove(in_path.c_str());
+        res.status = 400;
+        res.set_content(json{ { "error", "ffmpeg could not open it as a media file" } }.dump(), "application/json");
+        return;
+    }
+    avformat_find_stream_info(fmt, nullptr);
+    std::printf("ps5mm-media[frames]: 3 open_input ok, %d stream(s), duration=%lld\n",
+                (int) fmt->nb_streams, (long long) fmt->duration);
+    std::fflush(nullptr);
+
+    const AVCodec * dec = nullptr;
+    const int vs = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
+    std::printf("ps5mm-media[frames]: 4 best_stream vs=%d codec=%s\n", vs,
+                dec != nullptr ? dec->name : "(null)");
+    std::fflush(nullptr);
+    if (vs < 0 || dec == nullptr) {
+        avformat_close_input(&fmt);
+        std::remove(in_path.c_str());
+        res.status = 400;
+        res.set_content(json{ { "error", "no video stream in it" } }.dump(), "application/json");
+        return;
+    }
+
+    AVStream * st = fmt->streams[vs];
+    AVCodecContext * cctx = avcodec_alloc_context3(dec);
+    avcodec_parameters_to_context(cctx, st->codecpar);
+    if (avcodec_open2(cctx, dec, nullptr) < 0) {
+        avcodec_free_context(&cctx);
+        avformat_close_input(&fmt);
+        std::remove(in_path.c_str());
+        res.status = 500;
+        res.set_content(json{ { "error", "could not open the decoder" } }.dump(), "application/json");
+        return;
+    }
+
+    // 默认 jpeg：mjpeg encoder 不依赖 zlib，稳。
+    // 要无损就传 "png": true —— 那条路要 zlib，实测在这台机器上一编码就崩进程。
+    const bool     want_png = body.value("png", false);
+    std::printf("ps5mm-media[frames]: 5 decoder opened (%s)\n",
+                cctx->codec != nullptr ? cctx->codec->name : "?");
+    std::fflush(nullptr);
+    const AVCodec * enc     = avcodec_find_encoder(want_png ? AV_CODEC_ID_PNG : AV_CODEC_ID_MJPEG);
+    const char *   out_ext  = (enc != nullptr && enc->id == AV_CODEC_ID_PNG) ? "png" : "jpg";
+    std::printf("ps5mm-media[frames]: 6 encoder=%s ext=%s want=%d\n",
+                enc != nullptr ? enc->name : "(null)", out_ext, (int) want);
+    std::fflush(nullptr);
+
+    // Pick evenly spaced frames: count them first would mean two passes, so
+    // take one every `stride` decoded frames instead, based on duration.
+    const int64_t total_frames = st->duration > 0 && st->avg_frame_rate.den > 0
+                                     ? av_rescale_q(st->duration, st->time_base, AVRational{ 1, st->avg_frame_rate.num / st->avg_frame_rate.den })
+                                     : 0;
+    int stride = 1;
+    if (total_frames > 0 && total_frames > want) {
+        stride = (int) (total_frames / want);
+    }
+
+    json frames = json::array();
+    AVPacket * pkt = av_packet_alloc();
+    AVFrame *  frm = av_frame_alloc();
+    int decoded = 0, taken = 0;
+
+    while (taken < want && av_read_frame(fmt, pkt) >= 0) {
+        if (pkt->stream_index != vs) {
+            av_packet_unref(pkt);
+            continue;
+        }
+        if (avcodec_send_packet(cctx, pkt) < 0) {
+            av_packet_unref(pkt);
+            break;
+        }
+        av_packet_unref(pkt);
+
+        while (taken < want && avcodec_receive_frame(cctx, frm) == 0) {
+            if (decoded == 0) {
+                std::printf("ps5mm-media[frames]: 7 first frame %dx%d fmt=%d\n",
+                            frm->width, frm->height, (int) frm->format);
+                std::fflush(nullptr);
+            }
+            if (decoded % stride == 0) {
+                char out_path[256];
+                std::snprintf(out_path, sizeof out_path, "%s/media-frame-%d.%s", kStageDir, taken, out_ext);
+                if (frame_to_png(frm, enc, out_path)) {
+                    std::string png_bytes;
+                    if (read_file(out_path, png_bytes)) {
+                        const double t = st->time_base.den > 0
+                                             ? (double) frm->pts * st->time_base.num / st->time_base.den
+                                             : 0.0;
+                        json one{ { "t", t } };
+                        one[out_ext] = b64_encode((const unsigned char *) png_bytes.data(), png_bytes.size());
+                        frames.push_back(std::move(one));
+                        taken++;
+                    }
+                    std::remove(out_path);
+                }
+            }
+            decoded++;
+            av_frame_unref(frm);
+        }
+    }
+
+    // 关输入之前先抄下来：st 就是 fmt->streams[0]，avformat_close_input
+    // 之后它是野指针。2026-11-04 实地：探针 8 打完、构造响应时读
+    // st->codecpar 直接 SIGSEGV，把整个 app 带走（抽帧其实全成功了）。
+    const int        src_w  = st->codecpar->width;
+    const int        src_h  = st->codecpar->height;
+    const AVRational src_fr = st->avg_frame_rate;
+
+    av_frame_free(&frm);
+    av_packet_free(&pkt);
+    avcodec_free_context(&cctx);
+    avformat_close_input(&fmt);
+    std::remove(in_path.c_str());
+
+    std::printf("ps5mm-media[frames]: 8 done, decoded=%d taken=%d\n", decoded, taken);
+    std::fflush(nullptr);
+    if (frames.empty()) {
+        res.status = 500;
+        res.set_content(json{ { "error", "decoded no frames" } }.dump(), "application/json");
+        return;
+    }
+
+    json out{
+        { "ok", true },
+        { "w", src_w },
+        { "h", src_h },
+        { "fps", src_fr.den > 0 ? (double) src_fr.num / src_fr.den : 0.0 },
+        { "taken", taken },
+        { "frames", frames },
+    };
+    res.set_content(out.dump(), "application/json");
+}
+
+}  // namespace
+
+namespace ps5mm {
+
+void on_caps(const httplib::Request &, httplib::Response & res) {
+    const Caps & c = caps();
+    json out{
+        { "ok", true },
+        { "cpu_cores", c.cpu_cores },
+        { "threads", c.threads },
+        { "pool_gib", c.pool_gib },
+        { "free_gib", c.free_gib },
+        { "vae_tile", c.vae_tile },
+        { "ubatch", c.ubatch },
+        { "max_frames", c.max_frames },
+        { "pro", c.pro },
+        { "gpu", c.gpu },
+        { "why", c.why },
+    };
+    res.set_content(out.dump(), "application/json");
+}
+
+void media_register_routes(httplib::Server & server) {
+    server.Get("/media/v1/info", on_info);
+    server.Get("/media/v1/caps", on_caps);
+    server.Post("/media/v1/frames", on_frames);
+    std::printf("ps5mm-media: routes on /media/v1/{info,frames} (ffmpeg %s)\n", av_version_info());
+    std::fflush(nullptr);
+}
+
+}  // namespace ps5mm

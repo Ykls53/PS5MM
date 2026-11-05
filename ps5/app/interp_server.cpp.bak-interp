@@ -1,0 +1,271 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// PS5MM's frame interpolation engine: RIFE (ncnn + Vulkan), hung under the
+// picture engine's port like the media routes.
+//
+// Why it lives under 8002 and not in a slot of its own: RIFE holds no model in
+// memory between calls worth a slot -- its three nets are a few MB, and the
+// whole job is "two pictures in, one picture out". Slots are for engines that
+// keep a resident model.
+//
+//   GET  /media/v1/interp/info     -> model dir, loaded, jobs
+//   POST /media/v1/interpolate     { frame0: b64 png, frame1: b64 png,
+//                                    timestep?: 0.5 }
+//                                  -> { png: b64, ms: n }
+//
+// The model is loaded on the first request: a request at boot would fight the
+// LM for the pool, and most sessions never touch interpolation.
+
+#include "interp_server.hpp"
+
+#include "cpp-httplib/httplib.h"
+#include "nlohmann/json.hpp"
+
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_STATIC
+#include "stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_STATIC
+#include "stb_image_write.h"
+
+#include "rife.h"
+
+#include <unistd.h>
+
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <mutex>
+#include <string>
+
+namespace {
+
+using json = nlohmann::json;
+
+struct Engine {
+    RIFE *      rife = nullptr;
+    std::mutex  mu;
+    std::string model_dir;
+    int         jobs    = 0;
+    long        last_ms = 0;
+    bool        failed  = false;
+    std::string why;
+};
+
+Engine g_i;
+
+std::string b64_decode(const std::string & b64) {
+    std::string raw;
+    raw.reserve(b64.size() * 3 / 4 + 3);
+    unsigned acc = 0;
+    int      bits = 0;
+    for (char c : b64) {
+        int v = -1;
+        if (c >= 'A' && c <= 'Z') v = c - 'A';
+        else if (c >= 'a' && c <= 'z') v = c - 'a' + 26;
+        else if (c >= '0' && c <= '9') v = c - '0' + 52;
+        else if (c == '+') v = 62;
+        else if (c == '/') v = 63;
+        else continue;
+        acc = (acc << 6) | (unsigned) v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            raw.push_back((char) ((acc >> bits) & 0xFF));
+        }
+    }
+    return raw;
+}
+
+std::string b64_encode(const unsigned char * p, size_t n) {
+    static const char * t = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    out.reserve((n + 2) / 3 * 4);
+    for (size_t i = 0; i < n; i += 3) {
+        const unsigned v = (unsigned) p[i] << 16 |
+                           (i + 1 < n ? (unsigned) p[i + 1] << 8 : 0u) |
+                           (i + 2 < n ? (unsigned) p[i + 2] : 0u);
+        out.push_back(t[(v >> 18) & 63]);
+        out.push_back(t[(v >> 12) & 63]);
+        out.push_back(i + 1 < n ? t[(v >> 6) & 63] : '=');
+        out.push_back(i + 2 < n ? t[v & 63] : '=');
+    }
+    return out;
+}
+
+// PNG bytes -> RGB ncnn::Mat (RIFE's expected layout).
+ncnn::Mat decode_png(const std::string & raw) {
+    int w = 0, h = 0, c = 0;
+    unsigned char * pixels = stbi_load_from_memory((const unsigned char *) raw.data(), (int) raw.size(),
+                                                   &w, &h, &c, 3);
+    if (pixels == nullptr) {
+        return ncnn::Mat();
+    }
+    ncnn::Mat m = ncnn::Mat::from_pixels(pixels, ncnn::Mat::PIXEL_RGB, w, h);
+    stbi_image_free(pixels);
+    return m;
+}
+
+bool encode_png(const ncnn::Mat & m, std::string & out) {
+    std::vector<unsigned char> rgb(m.w * m.h * 3);
+    m.to_pixels(rgb.data(), ncnn::Mat::PIXEL_RGB);
+    int len = 0;
+    unsigned char * png = stbi_write_png_to_mem(rgb.data(), 0, m.w, m.h, 3, &len);
+    if (png == nullptr) {
+        return false;
+    }
+    out.assign((const char *) png, (size_t) len);
+    free(png);
+    return true;
+}
+
+// Loaded once, on the first request.
+bool ensure_rife(std::string & err) {
+    if (g_i.rife != nullptr) {
+        return true;
+    }
+    if (g_i.failed) {
+        err = g_i.why;
+        return false;
+    }
+    if (g_i.model_dir.empty()) {
+        g_i.model_dir = "/data/PS5MM/rife";
+    }
+
+    // Which RIFE generation is this? Look at what is actually in the directory:
+    // v4 / v4.x ship a single flow net, everything older carries three. The
+    // path name is a weaker hint, so it is only the fallback.
+    const bool has_context = access((g_i.model_dir + "/contextnet.param").c_str(), F_OK) == 0;
+    const bool v4 = !has_context || g_i.model_dir.find("v4") != std::string::npos;
+    const bool v2 = g_i.model_dir.find("v2") != std::string::npos;
+    const bool uhd = g_i.model_dir.find("UHD") != std::string::npos ||
+                     g_i.model_dir.find("uhd") != std::string::npos;
+
+    const int threads = 4;
+    std::printf("ps5mm-interp: loading %s (v4=%d v2=%d uhd=%d threads=%d)\n",
+                g_i.model_dir.c_str(), (int) v4, (int) v2, (int) uhd, threads);
+    std::fflush(nullptr);
+
+    auto * r = new RIFE(0, false, false, uhd, threads, v2, v4);
+    const int rc = r->load(g_i.model_dir);
+    if (rc != 0) {
+        delete r;
+        g_i.failed = true;
+        g_i.why    = "RIFE could not load " + g_i.model_dir + " (rc " + std::to_string(rc) + ")";
+        err        = g_i.why;
+        std::printf("ps5mm-interp: %s\n", err.c_str());
+        std::fflush(nullptr);
+        return false;
+    }
+    g_i.rife = r;
+    std::printf("ps5mm-interp: loaded %s\n", g_i.model_dir.c_str());
+    std::fflush(nullptr);
+    return true;
+}
+
+void on_info(const httplib::Request &, httplib::Response & res) {
+    json out{
+        { "ok", true },
+        { "engine", "interp" },
+        { "model_dir", g_i.model_dir },
+        { "loaded", g_i.rife != nullptr },
+        { "jobs", g_i.jobs },
+        { "last_ms", g_i.last_ms },
+        { "failed", g_i.failed },
+        { "why", g_i.why },
+    };
+    res.set_content(out.dump(), "application/json");
+}
+
+void on_interpolate(const httplib::Request & req, httplib::Response & res) {
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const std::exception & e) {
+        res.status = 400;
+        res.set_content(json{ { "error", std::string("bad JSON: ") + e.what() } }.dump(), "application/json");
+        return;
+    }
+    const std::string f0 = body.value("frame0", std::string());
+    const std::string f1 = body.value("frame1", std::string());
+    if (f0.empty() || f1.empty()) {
+        res.status = 400;
+        res.set_content(json{ { "error", "give frame0 and frame1 (base64 png)" } }.dump(), "application/json");
+        return;
+    }
+    float timestep = body.value("timestep", 0.5f);
+    if (timestep <= 0.0f || timestep >= 1.0f) {
+        timestep = 0.5f;
+    }
+
+    std::lock_guard<std::mutex> lock(g_i.mu);
+
+    std::string err;
+    if (!ensure_rife(err)) {
+        res.status = 500;
+        res.set_content(json{ { "error", err } }.dump(), "application/json");
+        return;
+    }
+
+    const ncnn::Mat in0 = decode_png(b64_decode(f0));
+    const ncnn::Mat in1 = decode_png(b64_decode(f1));
+    if (in0.empty() || in1.empty()) {
+        res.status = 400;
+        res.set_content(json{ { "error", "a frame did not decode as PNG" } }.dump(), "application/json");
+        return;
+    }
+    if (in0.w != in1.w || in0.h != in1.h) {
+        res.status = 400;
+        res.set_content(json{ { "error", "the two frames are different sizes" } }.dump(), "application/json");
+        return;
+    }
+
+    ncnn::Mat out;
+    const auto t0 = std::chrono::steady_clock::now();
+    const int rc = g_i.rife->process(in0, in1, timestep, out);
+    const auto t1 = std::chrono::steady_clock::now();
+    g_i.last_ms = (long) std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+    if (rc != 0 || out.empty()) {
+        res.status = 500;
+        res.set_content(json{ { "error", "the interpolation failed (rc " + std::to_string(rc) + ")" } }.dump(),
+                        "application/json");
+        return;
+    }
+
+    std::string png;
+    if (!encode_png(out, png)) {
+        res.status = 500;
+        res.set_content(json{ { "error", "could not encode the result" } }.dump(), "application/json");
+        return;
+    }
+
+    g_i.jobs++;
+    std::printf("ps5mm-interp: job %d %dx%d t=%.2f in %ld ms\n", g_i.jobs, out.w, out.h, timestep, g_i.last_ms);
+    std::fflush(nullptr);
+
+    res.set_content(json{ { "png", b64_encode((const unsigned char *) png.data(), png.size()) },
+                          { "w", out.w },
+                          { "h", out.h },
+                          { "ms", g_i.last_ms } }
+                        .dump(),
+                    "application/json");
+}
+
+}  // namespace
+
+namespace ps5mm {
+
+void interp_register_routes(httplib::Server & server, const char * model_dir) {
+    if (model_dir != nullptr && model_dir[0] != 0) {
+        g_i.model_dir = model_dir;
+    }
+    server.Get("/media/v1/interp/info", on_info);
+    server.Post("/media/v1/interpolate", on_interpolate);
+    std::printf("ps5mm-interp: routes on /media/v1/{interp/info,interpolate} (model %s)\n",
+                g_i.model_dir.empty() ? "(first request decides)" : g_i.model_dir.c_str());
+    std::fflush(nullptr);
+}
+
+}  // namespace ps5mm

@@ -1,0 +1,32 @@
+[0/2] Re-checking globbed directories...
+[1/9] Performing build step for 'vulkan-shaders-gen'
+ninja: no work to do.
+[2/9] Performing install step for 'vulkan-shaders-gen'
+-- Up-to-date: /home/yk/PS5MM/build/app-ps5/llama/Release/./vulkan-shaders-gen
+[3/9] Completed 'vulkan-shaders-gen'
+[4/9] Provisioning UI assets
+-- UI: downloading from b11608: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b11608/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from b11608 failed: "Timeout was reached"
+-- UI: downloading from latest: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/latest/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from latest failed: "Timeout was reached"
+-- UI: HF download failed
+CMake Warning at /home/yk/PS5MM/third_party/llama.cpp/scripts/ui-assets.cmake:584 (message):
+  UI: no assets available - building without an embedded UI.  In a
+  disconnected environment, download the pre-built UI from a llama.cpp
+  release at https://github.com/ggml-org/llama.cpp/releases and extract to
+  tools/ui/dist.
+
+
+-- UI: assets unchanged, skipping embedding
+[0/2] Re-checking globbed directories...
+[1/4] Performing build step for 'vulkan-shaders-gen'
+ninja: no work to do.
+[2/4] Performing install step for 'vulkan-shaders-gen'
+-- Up-to-date: /home/yk/PS5MM/build/app-ps5/sd/Release/./vulkan-shaders-gen
+[3/4] Completed 'vulkan-shaders-gen'
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/tools/radv-link.sh: line 20: /home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp: Permission denied
+mv: cannot stat '/home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp': No such file or directory
+prefix-sd: originals saved (6 archives)
+prefix-sd: 18667 names get SDX_
+prefix-sd: 6 prefixed archives ready
+error: no public SDK stub exports required symbol _ZTHN2sd15parallel_detail8executorE

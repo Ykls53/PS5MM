@@ -1,0 +1,35 @@
+[0/2] Re-checking globbed directories...
+[1/9] Performing build step for 'vulkan-shaders-gen'
+ninja: no work to do.
+[2/9] Performing install step for 'vulkan-shaders-gen'
+-- Up-to-date: /home/yk/PS5MM/build/app-ps5/llama/Release/./vulkan-shaders-gen
+[3/9] Completed 'vulkan-shaders-gen'
+[4/9] Provisioning UI assets
+-- UI: downloading from b11608: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b11608/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from b11608 failed: "SSL connect error.  If this is due to https certificate verification failure, one may set environment variable CMAKE_TLS_VERIFY=0 to suppress it."
+-- UI: downloading from latest: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/latest/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from latest failed: "SSL connect error.  If this is due to https certificate verification failure, one may set environment variable CMAKE_TLS_VERIFY=0 to suppress it."
+-- UI: HF download failed
+CMake Warning at /home/yk/PS5MM/third_party/llama.cpp/scripts/ui-assets.cmake:584 (message):
+  UI: no assets available - building without an embedded UI.  In a
+  disconnected environment, download the pre-built UI from a llama.cpp
+  release at https://github.com/ggml-org/llama.cpp/releases and extract to
+  tools/ui/dist.
+
+
+-- UI: assets unchanged, skipping embedding
+[0/2] Re-checking globbed directories...
+[1/4] Performing build step for 'vulkan-shaders-gen'
+ninja: no work to do.
+[2/4] Performing install step for 'vulkan-shaders-gen'
+-- Up-to-date: /home/yk/PS5MM/build/app-ps5/sd/Release/./vulkan-shaders-gen
+[3/4] Completed 'vulkan-shaders-gen'
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/tools/radv-link.sh: line 20: /home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp: Permission denied
+mv: cannot stat '/home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp': No such file or directory
+prefix-sd: 18661 names get SDX_
+prefix-sd: 6 prefixed archives ready
+wrote 181155320 bytes: /home/yk/PS5MM/build/app-ps5/eboot.elf
+sha256 0816f6ecb3ec2352560905d7273bc88eb5a076b528a5afe4414be43a94c80fef
+wrote 179731144 bytes: /home/yk/PS5MM/build/app-ps5/title/PPSA99577/eboot.bin
+sha256 155f5c56d5b995b58b20fbfed7891ffb1995471cdf70863aa0b0665627da9b1b
+build-app: /home/yk/PS5MM/build/app-ps5/title/PPSA99577 (179731144 bytes)

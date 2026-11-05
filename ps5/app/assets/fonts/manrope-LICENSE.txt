@@ -1,0 +1,6 @@
+Noto Sans SC (SIL Open Font License 1.1)
+https://github.com/notofonts/noto-cjk
+
+本仓库的 manrope-*.huifont 由 scripts/bake-fonts-cn.sh 从 Noto Sans SC 可变字体烘焙，
+只包含界面与 GB2312 常用字，不再使用 Manrope 的字形。
+Manrope 原字体（OFL）的历史见 git log。

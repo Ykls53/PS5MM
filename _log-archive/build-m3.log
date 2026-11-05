@@ -1,0 +1,1255 @@
+[0/2] Re-checking globbed directories...
+[1/9] Performing build step for 'vulkan-shaders-gen'
+ninja: no work to do.
+[2/9] Performing install step for 'vulkan-shaders-gen'
+-- Up-to-date: /home/yk/PS5MM/build/app-ps5/llama/Release/./vulkan-shaders-gen
+[3/9] Completed 'vulkan-shaders-gen'
+[4/9] Provisioning UI assets
+-- UI: downloading from b11608: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b11608/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from b11608 failed: "Timeout was reached"
+-- UI: downloading from latest: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/latest/dist.tar.gz
+-- UI: download dist.tar.gz.sha256 from latest failed: "Timeout was reached"
+-- UI: HF download failed
+CMake Warning at /home/yk/PS5MM/third_party/llama.cpp/scripts/ui-assets.cmake:584 (message):
+  UI: no assets available - building without an embedded UI.  In a
+  disconnected environment, download the pre-built UI from a llama.cpp
+  release at https://github.com/ggml-org/llama.cpp/releases and extract to
+  tools/ui/dist.
+
+
+-- UI: assets unchanged, skipping embedding
+[0/2] Re-checking globbed directories...
+[1/438] Creating directories for 'vulkan-shaders-gen'
+[2/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/hbm.cpp.o
+[3/438] No download step for 'vulkan-shaders-gen'
+[4/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/ascii.c.o
+[5/438] No update step for 'vulkan-shaders-gen'
+[6/438] No patch step for 'vulkan-shaders-gen'
+[7/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regerror.c.o
+[8/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode_fold1_key.c.o
+[9/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/st.c.o
+[10/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode_fold3_key.c.o
+[11/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode_fold2_key.c.o
+[12/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regenc.c.o
+[13/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/utf8.c.o
+[14/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode_unfold_key.c.o
+[15/438] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-alloc.c.o
+[16/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode.c.o
+[17/438] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o
+[18/438] Building C object thirdparty/CMakeFiles/sd-utf8proc.dir/utf8proc/utf8proc.c.o
+[19/438] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml.cpp.o
+[20/438] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/x86/quants.c.o
+[21/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regexec.c.o
+[22/438] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.c.o
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/ggml-cpu.c:1907:13: warning: enumeration values 'GGML_OP_SAGE_ATTN' and 'GGML_OP_SOL_ATTN' not handled in switch [-Wswitch]
+ 1907 |     switch (tensor->op) {
+      |             ^~~~~~~~~~
+1 warning generated.
+[23/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/tiled/tiled-kernel.cpp.o
+[24/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regcomp.c.o
+[25/438] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regparse.c.o
+[26/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/traits.cpp.o
+[27/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/vec.cpp.o
+[28/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/mmq.cpp.o
+[29/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/amx.cpp.o
+[30/438] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml.c.o
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+ 5696 |     GGML_ASSERT(isfinite(scale) && scale > 0.0f);
+      |                 ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:86:14: note: expanded from macro '__fp_type_select'
+   86 |     volatile float: f(x),                                               \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:87:14: note: expanded from macro '__fp_type_select'
+   87 |     volatile double: d(x),                                              \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:88:14: note: expanded from macro '__fp_type_select'
+   88 |     volatile long double: ld(x),                                        \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:89:20: note: expanded from macro '__fp_type_select'
+   89 |     volatile const float: f(x),                                         \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:90:20: note: expanded from macro '__fp_type_select'
+   90 |     volatile const double: d(x),                                        \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:91:20: note: expanded from macro '__fp_type_select'
+   91 |     volatile const long double: ld(x),                                  \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'const float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:92:11: note: expanded from macro '__fp_type_select'
+   92 |     const float: f(x),                                                  \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'const double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:93:11: note: expanded from macro '__fp_type_select'
+   93 |     const double: d(x),                                                 \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5696:17: warning: due to lvalue conversion of the controlling expression, association of type 'const long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:94:11: note: expanded from macro '__fp_type_select'
+   94 |     const long double: ld(x))
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+ 5718 |     GGML_ASSERT(isfinite(scale) && scale > 0.0f && isfinite(tau));
+      |                 ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:86:14: note: expanded from macro '__fp_type_select'
+   86 |     volatile float: f(x),                                               \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:87:14: note: expanded from macro '__fp_type_select'
+   87 |     volatile double: d(x),                                              \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:88:14: note: expanded from macro '__fp_type_select'
+   88 |     volatile long double: ld(x),                                        \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:89:20: note: expanded from macro '__fp_type_select'
+   89 |     volatile const float: f(x),                                         \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:90:20: note: expanded from macro '__fp_type_select'
+   90 |     volatile const double: d(x),                                        \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:91:20: note: expanded from macro '__fp_type_select'
+   91 |     volatile const long double: ld(x),                                  \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'const float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:92:11: note: expanded from macro '__fp_type_select'
+   92 |     const float: f(x),                                                  \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'const double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:93:11: note: expanded from macro '__fp_type_select'
+   93 |     const double: d(x),                                                 \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:17: warning: due to lvalue conversion of the controlling expression, association of type 'const long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:94:11: note: expanded from macro '__fp_type_select'
+   94 |     const long double: ld(x))
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+ 5718 |     GGML_ASSERT(isfinite(scale) && scale > 0.0f && isfinite(tau));
+      |                                                    ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:86:14: note: expanded from macro '__fp_type_select'
+   86 |     volatile float: f(x),                                               \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:87:14: note: expanded from macro '__fp_type_select'
+   87 |     volatile double: d(x),                                              \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:88:14: note: expanded from macro '__fp_type_select'
+   88 |     volatile long double: ld(x),                                        \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:89:20: note: expanded from macro '__fp_type_select'
+   89 |     volatile const float: f(x),                                         \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:90:20: note: expanded from macro '__fp_type_select'
+   90 |     volatile const double: d(x),                                        \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:91:20: note: expanded from macro '__fp_type_select'
+   91 |     volatile const long double: ld(x),                                  \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'const float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:92:11: note: expanded from macro '__fp_type_select'
+   92 |     const float: f(x),                                                  \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'const double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:93:11: note: expanded from macro '__fp_type_select'
+   93 |     const double: d(x),                                                 \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml.c:5718:52: warning: due to lvalue conversion of the controlling expression, association of type 'const long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:111:21: note: expanded from macro 'isfinite'
+  111 | #define isfinite(x) __fp_type_select(x, __isfinitef, __isfinite, __isfinitel)
+      |                     ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:94:11: note: expanded from macro '__fp_type_select'
+   94 |     const long double: ld(x))
+      |           ^
+27 warnings generated.
+[31/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.cpp.o
+[32/438] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o
+[33/438] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/quants.c.o
+[34/438] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend.cpp.o
+[35/438] Building C object thirdparty/CMakeFiles/zip.dir/zip.c.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/zip.c:40:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/miniz.h:4988:9: warning: Using fopen, ftello, fseeko, stat() etc. path for file I/O - this path may not support large files. [-W#pragma-messages]
+ 4988 | #pragma message(                                                               \
+      |         ^
+1 warning generated.
+[36/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/x86/repack.cpp.o
+[37/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/binary-ops.cpp.o
+[38/438] Performing configure step for 'vulkan-shaders-gen'
+-- The C compiler identification is GNU 15.2.0
+-- The CXX compiler identification is GNU 15.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Enabling coopmat glslc support
+-- Enabling coopmat2 glslc support
+-- Enabling dot glslc support
+-- Enabling bfloat16 glslc support
+-- Enabling E4M3 glslc support
+-- Configuring done (2.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/yk/PS5MM/build/app-ps5/sd/ggml/src/ggml-vulkan/vulkan-shaders-gen-prefix/src/vulkan-shaders-gen-build
+[39/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/unary-ops.cpp.o
+[40/438] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o
+[41/438] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o
+[42/438] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+ 5338 |     if (isinf(f)) {
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:86:14: note: expanded from macro '__fp_type_select'
+   86 |     volatile float: f(x),                                               \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:87:14: note: expanded from macro '__fp_type_select'
+   87 |     volatile double: d(x),                                              \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:88:14: note: expanded from macro '__fp_type_select'
+   88 |     volatile long double: ld(x),                                        \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:89:20: note: expanded from macro '__fp_type_select'
+   89 |     volatile const float: f(x),                                         \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:90:20: note: expanded from macro '__fp_type_select'
+   90 |     volatile const double: d(x),                                        \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:91:20: note: expanded from macro '__fp_type_select'
+   91 |     volatile const long double: ld(x),                                  \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'const float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:92:11: note: expanded from macro '__fp_type_select'
+   92 |     const float: f(x),                                                  \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'const double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:93:11: note: expanded from macro '__fp_type_select'
+   93 |     const double: d(x),                                                 \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5338:9: warning: due to lvalue conversion of the controlling expression, association of type 'const long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:112:18: note: expanded from macro 'isinf'
+  112 | #define isinf(x) __fp_type_select(x, __isinff, __isinf, __isinfl)
+      |                  ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:94:11: note: expanded from macro '__fp_type_select'
+   94 |     const long double: ld(x))
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+ 5343 |     if (isnan(f)) {
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:86:14: note: expanded from macro '__fp_type_select'
+   86 |     volatile float: f(x),                                               \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:87:14: note: expanded from macro '__fp_type_select'
+   87 |     volatile double: d(x),                                              \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:88:14: note: expanded from macro '__fp_type_select'
+   88 |     volatile long double: ld(x),                                        \
+      |              ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:89:20: note: expanded from macro '__fp_type_select'
+   89 |     volatile const float: f(x),                                         \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:90:20: note: expanded from macro '__fp_type_select'
+   90 |     volatile const double: d(x),                                        \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'const volatile long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:91:20: note: expanded from macro '__fp_type_select'
+   91 |     volatile const long double: ld(x),                                  \
+      |                    ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'const float' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:92:11: note: expanded from macro '__fp_type_select'
+   92 |     const float: f(x),                                                  \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'const double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:93:11: note: expanded from macro '__fp_type_select'
+   93 |     const double: d(x),                                                 \
+      |           ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-quants.c:5343:9: warning: due to lvalue conversion of the controlling expression, association of type 'const long double' will never be selected because it is qualified [-Wunreachable-code-generic-assoc]
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:114:2: note: expanded from macro 'isnan'
+  114 |         __fp_type_select(x, __inline_isnanf, __inline_isnan, __inline_isnanl)
+      |         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/math.h:94:11: note: expanded from macro '__fp_type_select'
+   94 |     const long double: ld(x))
+      |           ^
+18 warnings generated.
+[43/438] Linking CXX static library ggml/src/libggml-base.a
+[44/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/tiled/tiled.cpp.o
+[45/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/repack.cpp.o
+[46/438] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ops.cpp.o
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/ops.cpp:6240:13: warning: enumeration values 'GGML_TYPE_F8_E4M3' and 'GGML_TYPE_F8_E5M2' not handled in switch [-Wswitch]
+ 6240 |     switch (src0->type) {
+      |             ^~~~~~~~~~
+1 warning generated.
+[47/438] Linking CXX static library ggml/src/libggml-cpu.a
+[48/438] Performing build step for 'vulkan-shaders-gen'
+[1/2] Building CXX object CMakeFiles/vulkan-shaders-gen.dir/vulkan-shaders-gen.cpp.o
+[2/2] Linking CXX executable /home/yk/PS5MM/build/app-ps5/sd/bin/vulkan-shaders-gen
+[49/438] Performing install step for 'vulkan-shaders-gen'
+-- Installing: /home/yk/PS5MM/build/app-ps5/sd/Release/./vulkan-shaders-gen
+[50/438] Completed 'vulkan-shaders-gen'
+[51/438] Generate vulkan shaders header
+[52/438] Generate vulkan shaders for cumsum.comp
+[53/438] Generate vulkan shaders for acc.comp
+[54/438] Generate vulkan shaders for argsort_large.comp
+[55/438] Generate vulkan shaders for conv_transpose_1d.comp
+[56/438] Generate vulkan shaders for dequant_iq4_nl.comp
+[57/438] Generate vulkan shaders for dequant_iq3_xxs.comp
+[58/438] Generate vulkan shaders for dequant_iq4_xs.comp
+[59/438] Generate vulkan shaders for dequant_iq2_xxs.comp
+[60/438] Generate vulkan shaders for arange.comp
+[61/438] Generate vulkan shaders for dequant_mxfp4.comp
+[62/438] Generate vulkan shaders for dequant_f32.comp
+[63/438] Generate vulkan shaders for dequant_q2_0.comp
+[64/438] Generate vulkan shaders for dequant_nvfp4.comp
+[65/438] Generate vulkan shaders for dequant_iq3_s.comp
+[66/438] Generate vulkan shaders for dequant_q1_0.comp
+[67/438] Generate vulkan shaders for argmax.comp
+[68/438] Generate vulkan shaders for dequant_iq2_xs.comp
+[69/438] Generate vulkan shaders for dequant_iq1_m.comp
+[70/438] Generate vulkan shaders for argsort.comp
+[71/438] Generate vulkan shaders for add1.comp
+[72/438] Generate vulkan shaders for cumsum_multipass1.comp
+[73/438] Generate vulkan shaders for dequant_iq2_s.comp
+[74/438] Generate vulkan shaders for col2im_1d.comp
+[75/438] Generate vulkan shaders for dequant_iq1_s.comp
+[76/438] Generate vulkan shaders for cross_entropy_loss_back.comp
+[77/438] Generate vulkan shaders for copy_transpose.comp
+[78/438] Generate vulkan shaders for count_equal.comp
+[79/438] Generate vulkan shaders for add_id.comp
+[80/438] Generate vulkan shaders for dequant_q2_k.comp
+[81/438] Generate vulkan shaders for copy_transpose_02.comp
+[82/438] Generate vulkan shaders for dequant_q5_k.comp
+[83/438] Generate vulkan shaders for contig_copy.comp
+[84/438] Generate vulkan shaders for cumsum_multipass2.comp
+[85/438] Generate vulkan shaders for dequant_q5_1.comp
+[86/438] Generate vulkan shaders for concat.comp
+[87/438] Generate vulkan shaders for count_experts.comp
+[88/438] Generate vulkan shaders for cross_entropy_loss.comp
+[89/438] Generate vulkan shaders for copy.comp
+[90/438] Generate vulkan shaders for conv2d_dw.comp
+[91/438] Generate vulkan shaders for dequant_q5_0.comp
+[92/438] Generate vulkan shaders for dsv4_hc_post.comp
+[93/438] Generate vulkan shaders for dequant_q6_k.comp
+[94/438] Generate vulkan shaders for dequant_tq2_0.comp
+[95/438] Generate vulkan shaders for dequant_q4_0.comp
+[96/438] Generate vulkan shaders for copy_from_quant.comp
+[97/438] Generate vulkan shaders for conv3d_mm.comp
+[98/438] Generate vulkan shaders for add.comp
+[99/438] Generate vulkan shaders for dequant_q3_k.comp
+[100/438] Generate vulkan shaders for conv2d_mm.comp
+[101/438] Generate vulkan shaders for dequant_q4_1.comp
+[102/438] Generate vulkan shaders for dequant_tq1_0.comp
+[103/438] Generate vulkan shaders for dequant_q4_k.comp
+[104/438] Generate vulkan shaders for diag.comp
+[105/438] Generate vulkan shaders for dequant_q8_0.comp
+[106/438] Generate vulkan shaders for flash_attn_decode_phase_1.comp
+[107/438] Generate vulkan shaders for fill.comp
+[108/438] Generate vulkan shaders for diag_mask_inf.comp
+[109/438] Generate vulkan shaders for dsv4_hc_pre.comp
+[110/438] Generate vulkan shaders for dsv4_hc_comb.comp
+[111/438] Generate vulkan shaders for flash_attn_decode_phase_2.comp
+[112/438] Generate vulkan shaders for l2_norm.comp
+[113/438] Generate vulkan shaders for div.comp
+[114/438] Generate vulkan shaders for flash_attn_split_k_reduce.comp
+[115/438] Generate vulkan shaders for geglu_quick.comp
+[116/438] Generate vulkan shaders for get_rows.comp
+[117/438] Generate vulkan shaders for flash_attn_sparse_compact.comp
+[118/438] Generate vulkan shaders for mul_mat_i8_tensorwise.comp
+[119/438] Generate vulkan shaders for geglu.comp
+[120/438] Generate vulkan shaders for get_rows_back.comp
+[121/438] Generate vulkan shaders for geglu_erf.comp
+[122/438] Generate vulkan shaders for gated_delta_net.comp
+[123/438] Generate vulkan shaders for flash_attn_mask_opt.comp
+[124/438] Generate vulkan shaders for flash_attn_cm1.comp
+[125/438] Generate vulkan shaders for fwht.comp
+[126/438] Generate vulkan shaders for log.comp
+[127/438] Generate vulkan shaders for mul_mat_split_k_reduce.comp
+[128/438] Generate vulkan shaders for im2col_3d.comp
+[129/438] Generate vulkan shaders for group_norm.comp
+[130/438] Generate vulkan shaders for flash_attn_cm2.comp
+[131/438] Generate vulkan shaders for im2col.comp
+[132/438] Generate vulkan shaders for mul_mat_i8_tensorwise_cm1.comp
+[133/438] Generate vulkan shaders for mul.comp
+[134/438] Generate vulkan shaders for gla.comp
+[135/438] Generate vulkan shaders for opt_step_sgd.comp
+[136/438] Generate vulkan shaders for pad.comp
+[137/438] Generate vulkan shaders for mul_mat_vec_p021.comp
+[138/438] Generate vulkan shaders for lightning_indexer.comp
+[139/438] Generate vulkan shaders for pad_reflect_1d.comp
+[140/438] Generate vulkan shaders for opt_step_adamw.comp
+[141/438] Generate vulkan shaders for mul_mat_vec_nc.comp
+[142/438] Generate vulkan shaders for mul_mat_vec_iq1_m.comp
+[143/438] Generate vulkan shaders for mul_mat_vec_iq1_s.comp
+[144/438] Generate vulkan shaders for norm.comp
+[145/438] Generate vulkan shaders for mul_mat_vec_iq3_s.comp
+[146/438] Generate vulkan shaders for mul_mat_vec_iq2_xxs.comp
+[147/438] Generate vulkan shaders for out_prod.comp
+[148/438] Generate vulkan shaders for mul_mat_vec_iq4_xs.comp
+[149/438] Generate vulkan shaders for mul_mat_vec_iq2_xs.comp
+[150/438] Generate vulkan shaders for reglu.comp
+[151/438] Generate vulkan shaders for mul_mat_vec_iq3_xxs.comp
+[152/438] Generate vulkan shaders for mul_mat_vec_q4_k.comp
+[153/438] Generate vulkan shaders for multi_add.comp
+[154/438] Generate vulkan shaders for mul_mat_vec_iq2_s.comp
+[155/438] Generate vulkan shaders for mul_mat_vec_tq1_0.comp
+[156/438] Generate vulkan shaders for mul_mat_vec_tq2_0.comp
+[157/438] Generate vulkan shaders for mul_mat_vec_q3_k.comp
+[158/438] Generate vulkan shaders for mul_mat_vec_q5_k.comp
+[159/438] Generate vulkan shaders for mul_mat_vec_q2_k.comp
+[160/438] Generate vulkan shaders for quantize_i8_convrot.comp
+[161/438] Generate vulkan shaders for pool1d.comp
+[162/438] Generate vulkan shaders for mul_mat_vec_q6_k.comp
+[163/438] Generate vulkan shaders for pool2d.comp
+[164/438] Generate vulkan shaders for quantize_q8_1.comp
+[165/438] Generate vulkan shaders for copy_to_quant.comp
+[166/438] Generate vulkan shaders for repeat_back.comp
+[167/438] Generate vulkan shaders for flash_attn.comp
+[168/438] Generate vulkan shaders for repeat.comp
+[169/438] Generate vulkan shaders for rope_apply.comp
+[170/438] Generate vulkan shaders for rms_norm_back.comp
+[171/438] Generate vulkan shaders for roll.comp
+[172/438] Generate vulkan shaders for rope_multi.comp
+[173/438] Generate vulkan shaders for rope_neox.comp
+[174/438] Generate vulkan shaders for scale.comp
+[175/438] Generate vulkan shaders for rms_norm_partials.comp
+[176/438] Generate vulkan shaders for rope_norm.comp
+[177/438] Generate vulkan shaders for rope_vision.comp
+[178/438] Generate vulkan shaders for soft_max_back.comp
+[179/438] Generate vulkan shaders for silu_back.comp
+[180/438] Generate vulkan shaders for snake.comp
+[181/438] Generate vulkan shaders for mul_mmq_cm1.comp
+[182/438] Generate vulkan shaders for solve_tri.comp
+[183/438] Generate vulkan shaders for soft_max_large3.comp
+[184/438] Generate vulkan shaders for soft_max_large2.comp
+[185/438] Generate vulkan shaders for get_rows_quant.comp
+[186/438] Generate vulkan shaders for sum_rows.comp
+[187/438] Generate vulkan shaders for ssm_scan.comp
+[188/438] Generate vulkan shaders for swiglu.comp
+[189/438] Generate vulkan shaders for soft_max_large1.comp
+[190/438] Generate vulkan shaders for swiglu_clamp.comp
+[191/438] Generate vulkan shaders for ssm_conv.comp
+[192/438] Generate vulkan shaders for topk_nary_search.comp
+[193/438] Generate vulkan shaders for topk_moe.comp
+[194/438] Generate vulkan shaders for topk_radix_select.comp
+[195/438] Generate vulkan shaders for timestep_embedding.comp
+[196/438] Generate vulkan shaders for sub.comp
+[197/438] Generate vulkan shaders for swiglu_oai.comp
+[198/438] Generate vulkan shaders for topk_argsort.comp
+[199/438] Generate vulkan shaders for tri.comp
+[200/438] Generate vulkan shaders for rms_norm.comp
+[201/438] Generate vulkan shaders for upscale.comp
+[202/438] Generate vulkan shaders for wkv7.comp
+[203/438] Generate vulkan shaders for wkv6.comp
+[204/438] Generate vulkan shaders for soft_max.comp
+[205/438] Generate vulkan shaders for mul_mm_cm2.comp
+[206/438] Generate vulkan shaders for unary.comp
+[207/438] Generate vulkan shaders for mul_mmq.comp
+[208/438] Generate vulkan shaders for mul_mat_vecq.comp
+[209/438] Generate vulkan shaders for mul_mat_vec.comp
+[210/438] Generate vulkan shaders for mul_mm.comp
+[211/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/argmax.comp.cpp.o
+[212/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/arange.comp.cpp.o
+[213/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/argsort.comp.cpp.o
+[214/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/count_equal.comp.cpp.o
+[215/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/cumsum_multipass2.comp.cpp.o
+[216/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/acc.comp.cpp.o
+[217/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/add_id.comp.cpp.o
+[218/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/col2im_1d.comp.cpp.o
+[219/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/cross_entropy_loss_back.comp.cpp.o
+[220/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/conv_transpose_1d.comp.cpp.o
+[221/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/cumsum_multipass1.comp.cpp.o
+[222/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/cross_entropy_loss.comp.cpp.o
+[223/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/cumsum.comp.cpp.o
+[224/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/add1.comp.cpp.o
+[225/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/conv2d_dw.comp.cpp.o
+[226/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/argsort_large.comp.cpp.o
+[227/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/count_experts.comp.cpp.o
+[228/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_f32.comp.cpp.o
+[229/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/copy_transpose_02.comp.cpp.o
+[230/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/copy_transpose.comp.cpp.o
+[231/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/concat.comp.cpp.o
+[232/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq4_nl.comp.cpp.o
+[233/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq1_s.comp.cpp.o
+[234/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq4_xs.comp.cpp.o
+[235/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_mxfp4.comp.cpp.o
+[236/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq2_s.comp.cpp.o
+[237/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq2_xxs.comp.cpp.o
+[238/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq3_xxs.comp.cpp.o
+[239/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q2_0.comp.cpp.o
+[240/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q3_k.comp.cpp.o
+[241/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q2_k.comp.cpp.o
+[242/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_nvfp4.comp.cpp.o
+[243/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q1_0.comp.cpp.o
+[244/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq2_xs.comp.cpp.o
+[245/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq3_s.comp.cpp.o
+[246/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q4_1.comp.cpp.o
+[247/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q4_k.comp.cpp.o
+[248/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q5_0.comp.cpp.o
+[249/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_iq1_m.comp.cpp.o
+[250/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q4_0.comp.cpp.o
+[251/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q5_1.comp.cpp.o
+[252/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q6_k.comp.cpp.o
+[253/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_tq2_0.comp.cpp.o
+[254/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q8_0.comp.cpp.o
+[255/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/diag_mask_inf.comp.cpp.o
+[256/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/contig_copy.comp.cpp.o
+[257/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_tq1_0.comp.cpp.o
+[258/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dequant_q5_k.comp.cpp.o
+[259/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dsv4_hc_comb.comp.cpp.o
+[260/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dsv4_hc_pre.comp.cpp.o
+[261/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/diag.comp.cpp.o
+[262/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/fill.comp.cpp.o
+[263/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/flash_attn_split_k_reduce.comp.cpp.o
+[264/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/dsv4_hc_post.comp.cpp.o
+[265/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/flash_attn_sparse_compact.comp.cpp.o
+[266/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/get_rows_back.comp.cpp.o
+[267/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/geglu.comp.cpp.o
+[268/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/geglu_erf.comp.cpp.o
+[269/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/fwht.comp.cpp.o
+[270/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/flash_attn_mask_opt.comp.cpp.o
+[271/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/group_norm.comp.cpp.o
+[272/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/copy.comp.cpp.o
+[273/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/geglu_quick.comp.cpp.o
+[274/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/l2_norm.comp.cpp.o
+[275/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_i8_tensorwise.comp.cpp.o
+[276/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/flash_attn_decode_phase_1.comp.cpp.o
+[277/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/gated_delta_net.comp.cpp.o
+[278/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/im2col_3d.comp.cpp.o
+[279/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/get_rows.comp.cpp.o
+[280/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_i8_tensorwise_cm1.comp.cpp.o
+[281/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/div.comp.cpp.o
+[282/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/log.comp.cpp.o
+[283/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/add.comp.cpp.o
+[284/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/im2col.comp.cpp.o
+[285/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/conv3d_mm.comp.cpp.o
+[286/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/copy_from_quant.comp.cpp.o
+[287/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/flash_attn_decode_phase_2.comp.cpp.o
+[288/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_split_k_reduce.comp.cpp.o
+[289/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/lightning_indexer.comp.cpp.o
+[290/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/gla.comp.cpp.o
+[291/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul.comp.cpp.o
+[292/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_nc.comp.cpp.o
+[293/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_p021.comp.cpp.o
+[294/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/multi_add.comp.cpp.o
+[295/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/out_prod.comp.cpp.o
+[296/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/opt_step_sgd.comp.cpp.o
+[297/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/norm.comp.cpp.o
+[298/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/opt_step_adamw.comp.cpp.o
+[299/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/pad.comp.cpp.o
+[300/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/pad_reflect_1d.comp.cpp.o
+[301/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/conv2d_mm.comp.cpp.o
+[302/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/pool1d.comp.cpp.o
+[303/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/flash_attn_cm2.comp.cpp.o
+[304/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/quantize_i8_convrot.comp.cpp.o
+[305/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_iq4_xs.comp.cpp.o
+[306/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/repeat_back.comp.cpp.o
+[307/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/reglu.comp.cpp.o
+[308/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/pool2d.comp.cpp.o
+[309/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/repeat.comp.cpp.o
+[310/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_q4_k.comp.cpp.o
+[311/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/rms_norm_back.comp.cpp.o
+[312/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/quantize_q8_1.comp.cpp.o
+[313/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/rms_norm_partials.comp.cpp.o
+[314/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_iq3_xxs.comp.cpp.o
+[315/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/rope_apply.comp.cpp.o
+[316/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/roll.comp.cpp.o
+[317/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_q5_k.comp.cpp.o
+[318/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/flash_attn_cm1.comp.cpp.o
+[319/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_iq2_xxs.comp.cpp.o
+[320/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/silu_back.comp.cpp.o
+[321/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/scale.comp.cpp.o
+[322/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/rope_vision.comp.cpp.o
+[323/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/rope_norm.comp.cpp.o
+[324/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/soft_max_back.comp.cpp.o
+[325/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_tq2_0.comp.cpp.o
+[326/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_tq1_0.comp.cpp.o
+[327/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/rope_neox.comp.cpp.o
+[328/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_q6_k.comp.cpp.o
+[329/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/ssm_conv.comp.cpp.o
+[330/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/soft_max_large1.comp.cpp.o
+[331/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/soft_max_large2.comp.cpp.o
+[332/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/soft_max_large3.comp.cpp.o
+[333/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/snake.comp.cpp.o
+[334/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/rope_multi.comp.cpp.o
+[335/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/solve_tri.comp.cpp.o
+[336/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/ssm_scan.comp.cpp.o
+[337/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/swiglu_clamp.comp.cpp.o
+[338/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_iq3_s.comp.cpp.o
+[339/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/sum_rows.comp.cpp.o
+[340/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/topk_moe.comp.cpp.o
+[341/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/topk_nary_search.comp.cpp.o
+[342/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/swiglu_oai.comp.cpp.o
+[343/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_q2_k.comp.cpp.o
+[344/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/topk_argsort.comp.cpp.o
+[345/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/topk_radix_select.comp.cpp.o
+[346/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/tri.comp.cpp.o
+[347/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/swiglu.comp.cpp.o
+[348/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_iq2_xs.comp.cpp.o
+[349/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/timestep_embedding.comp.cpp.o
+[350/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/upscale.comp.cpp.o
+[351/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/sub.comp.cpp.o
+[352/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/wkv6.comp.cpp.o
+[353/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_iq1_s.comp.cpp.o
+[354/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/wkv7.comp.cpp.o
+[355/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_q3_k.comp.cpp.o
+[356/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_iq1_m.comp.cpp.o
+[357/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/soft_max.comp.cpp.o
+[358/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec_iq2_s.comp.cpp.o
+[359/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/get_rows_quant.comp.cpp.o
+[360/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/rms_norm.comp.cpp.o
+[361/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/unary.comp.cpp.o
+[362/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/copy_to_quant.comp.cpp.o
+[363/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/flash_attn.comp.cpp.o
+[364/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mmq_cm1.comp.cpp.o
+[365/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/conditioning/wan_audio.cpp.o
+[366/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/regex.cpp.o
+[367/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/parallel.cpp.o
+[368/438] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-dl.cpp.o
+[369/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/probe/backend_probe.cpp.o
+[370/438] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-reg.cpp.o
+[371/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/probe/conv_direct.cpp.o
+[372/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_extend.cpp.o
+[373/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/probe/flash_attn.cpp.o
+[374/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/layer_split_partition.cpp.o
+[375/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/segment_weight_pipeline.cpp.o
+[376/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/segment_graph_bindings.cpp.o
+[377/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mmq.comp.cpp.o
+[378/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/runner_cache.cpp.o
+[379/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_tensor_utils.cpp.o
+[380/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mm_cm2.comp.cpp.o
+[381/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_extend_backend.cpp.o
+[382/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/compute_workspace.cpp.o
+[383/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/torch_zip_io.cpp.o
+[384/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model/adapter/lora_ops.cpp.o
+[385/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/backend_fit.cpp.o
+[386/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/gguf_io.cpp.o
+[387/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/torch_legacy_io.cpp.o
+[388/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/pickle_io.cpp.o
+[389/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/audio_processing.cpp.o
+[390/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_manager_prefetch.cpp.o
+[391/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_runner.cpp.o
+[392/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/tiling.cpp.o
+[393/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/imatrix.cpp.o
+[394/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_graph_cut.cpp.o
+[395/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_loader_files.cpp.o
+[396/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/convert.cpp.o
+[397/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_manager_files.cpp.o
+[398/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/ggml-vulkan-debug.cpp.o
+[399/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vec.comp.cpp.o
+[400/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mat_vecq.comp.cpp.o
+[401/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/version.cpp.o
+[402/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/guidance.cpp.o
+[403/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/ggml-vulkan-buffers.cpp.o
+[404/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/image_preprocess.cpp.o
+[405/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/sensenova_u1_tokenizer.cpp.o
+[406/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/tokenize_util.cpp.o
+[407/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/bpe_tokenizer.cpp.o
+[408/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/request.cpp.o
+[409/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/util.cpp.o
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/core/util.cpp:407:31: warning: 'codecvt_utf8<char32_t>' is deprecated [-Wdeprecated-declarations]
+  407 |     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+      |                               ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/codecvt:194:28: note: 'codecvt_utf8<char32_t>' has been explicitly marked deprecated here
+  194 | class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8 : public __codecvt_utf8<_Elem> {
+      |                            ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:1001:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+ 1001 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:974:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  974 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/core/util.cpp:407:10: warning: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' is deprecated [-Wdeprecated-declarations]
+  407 |     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+      |          ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/locale:3114:28: note: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' has been explicitly marked deprecated here
+ 3114 | class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |                            ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:1001:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+ 1001 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:974:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  974 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/core/util.cpp:412:31: warning: 'codecvt_utf8<char32_t>' is deprecated [-Wdeprecated-declarations]
+  412 |     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+      |                               ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/codecvt:194:28: note: 'codecvt_utf8<char32_t>' has been explicitly marked deprecated here
+  194 | class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8 : public __codecvt_utf8<_Elem> {
+      |                            ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:1001:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+ 1001 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:974:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  974 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/core/util.cpp:412:10: warning: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' is deprecated [-Wdeprecated-declarations]
+  412 |     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+      |          ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/locale:3114:28: note: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' has been explicitly marked deprecated here
+ 3114 | class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |                            ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:1001:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+ 1001 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:974:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  974 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/core/util.cpp:1:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/core/util.h:8:
+In file included from /home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/vector:325:
+In file included from /home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__format/formatter_bool.h:20:
+In file included from /home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__format/formatter_integral.h:35:
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/locale:3257:1: warning: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' is deprecated [-Wdeprecated-declarations]
+ 3257 | wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* __frm, const _Elem* __frm_end) {
+      | ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/locale:3161:12: note: in instantiation of member function 'std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>::to_bytes' requested here
+ 3161 |     return to_bytes(__wstr.data(), __wstr.data() + __wstr.size());
+      |            ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/core/util.cpp:413:22: note: in instantiation of member function 'std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>::to_bytes' requested here
+  413 |     return converter.to_bytes(utf32_str);
+      |                      ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/locale:3114:28: note: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' has been explicitly marked deprecated here
+ 3114 | class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |                            ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:1001:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+ 1001 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/.deps/native/ps5-payload-sdk/target/include/c++/v1/__config:974:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  974 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+5 warnings generated.
+[410/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/tokenizer_config.cpp.o
+[411/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/qwen2_tokenizer.cpp.o
+[412/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/sample-cache.cpp.o
+[413/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/clip_tokenizer.cpp.o
+[414/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/gemma_tokenizer.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/tokenizers/gemma_tokenizer.cpp:5:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[415/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/extensions/pulid_extension.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/extensions/pulid_extension.cpp:1:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/extensions/generation_extension.h:11:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[416/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/tokenizer.cpp.o
+[417/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/mistral_tokenizer.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/tokenizers/mistral_tokenizer.cpp:5:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[418/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/detailer.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/detailer.cpp:13:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[419/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/safetensors_io.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model_io/safetensors_io.cpp:16:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[420/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/name_conversion.cpp.o
+[421/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_loader.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model_loader.cpp:33:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[422/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/stable-diffusion.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/stable-diffusion.cpp:11:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/generation.h:4:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[423/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/upscaler.cpp.o
+[424/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_manager.cpp.o
+[425/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/hf_tokenizer.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/tokenizers/hf_tokenizer.cpp:17:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[426/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/t5_unigram_tokenizer.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/tokenizers/t5_unigram_tokenizer.cpp:10:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[427/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/extensions/photomaker_extension.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/extensions/photomaker_extension.cpp:2:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/extensions/generation_extension.h:11:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[428/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/image.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/image.cpp:1:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/generation.h:4:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/image.cpp:10:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:401:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  401 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+5 warnings generated.
+[429/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/video.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/video.cpp:1:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/generation.h:4:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/video.cpp:15:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:401:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  401 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+5 warnings generated.
+[430/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/mul_mm.comp.cpp.o
+[431/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/diffusion_engine.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/diffusion_engine.cpp:34:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/diffusion_engine.cpp:45:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/ltx_vae.hpp:15:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:401:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  401 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/diffusion_engine.cpp:45:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/ltx_vae.hpp:16:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/wan_vae.hpp:1441:13: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+ 1441 |         int get_encoder_output_channels(int input_channels) {
+      |             ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+6 warnings generated.
+[432/438] Building CXX object ggml/src/ggml-vulkan/CMakeFiles/ggml-vulkan.dir/ggml-vulkan.cpp.o
+[433/438] Linking CXX static library ggml/src/ggml-vulkan/libggml-vulkan.a
+[434/438] Linking CXX static library ggml/src/libggml.a
+[435/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/vocab/vocab.cpp.o
+[436/438] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/model_builders.cpp.o
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:7:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:25:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/diffusion/lingbot_video.hpp:373:22: warning: 'forward' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  373 |         ggml_tensor* forward(GGMLRunnerContext* ctx, ggml_tensor* x) {
+      |                      ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/common/ggml_block.hpp:133:26: note: overridden virtual function is here
+  133 |     virtual ggml_tensor* forward(GGMLRunnerContext* ctx, ggml_tensor* x) = 0;
+      |                          ^
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:44:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/auto_encoder_kl.hpp:6:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:401:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  401 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:44:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/auto_encoder_kl.hpp:70:10: warning: 'init_params' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+   70 |     void init_params(ggml_context* ctx, const String2TensorStorage& tensor_storage_map = {}, const std::string prefix = "") {
+      |          ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/common/ggml_block.hpp:48:18: note: overridden virtual function is here
+   48 |     virtual void init_params(ggml_context* ctx, const String2TensorStorage& tensor_storage_map = {}, const std::string prefix = "") {}
+      |                  ^
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:44:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/auto_encoder_kl.hpp:839:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  839 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:45:
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/hunyuan_vae.hpp:13:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/wan_vae.hpp:1441:13: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+ 1441 |         int get_encoder_output_channels(int input_channels) {
+      |             ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:51:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/tae.hpp:799:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  799 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /home/yk/PS5MM/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:51:
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/tae.hpp:883:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  883 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/home/yk/PS5MM/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:198:17: note: overridden virtual function is here
+  198 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+11 warnings generated.
+[437/438] Linking CXX static library libstable-diffusion.a
+/home/yk/PS5MM/.deps/src/PS5_Vulkan/tools/radv-link.sh: line 20: /home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp: Permission denied
+mv: cannot stat '/home/yk/PS5MM/.deps/src/PS5_Vulkan/build/radv-platform-local.map.tmp': No such file or directory
+wrote 101806104 bytes: /home/yk/PS5MM/build/app-ps5/eboot.elf
+sha256 82e9a4fe39d58e7e228c8547b2a50169c4fa975ed972e5b5cc0fe994757b4a0b
+wrote 100579544 bytes: /home/yk/PS5MM/build/app-ps5/title/PPSA99577/eboot.bin
+sha256 8a6c2d2ccefbd5bcc78082fa2a48557e2dd3033710cee2261ce8ec9a3c882ef1
+build-app: /home/yk/PS5MM/build/app-ps5/title/PPSA99577 (100579544 bytes)
