@@ -115,9 +115,22 @@ curl -X POST http://<IP>:8003/unload
 
 GPL-3.0-or-later。本项目衍生自 [cobanov/PS5LM](https://github.com/cobanov/PS5LM)（GPL-3.0）。
 
-## 致谢
+## 关于这个版本
 
-llama.cpp（ggml / llama-server / mtmd）、stable-diffusion.cpp、VoxCPM.cpp（bluryar）与
-VoxCPM（OpenBMB）、trellis.cpp（TRELLIS.2）、ps5-homebrew-ui、Noto Sans SC、
-PS5_Vulkan / PS5_Mesa（RADV）、ps5-payload-sdk、TacHen、ShadowMountPlus、ftpsrv。
+这是**测试版本**，不保证稳定。我们已经把五个引擎、六个能力全部真机跑过一轮
+（文字 / 图像 / 视频 / 语音克隆 / 三维 / 插帧），但边界情况、长时间运行、
+不同固件版本下的问题一定还有。遇到 bug、崩进程、模型加载失败，欢迎开 issue 反馈。
+
+## 来源与致谢
+
+本项目的**前端框架直接基于 [PS5LM](https://github.com/cobanov/PS5LM) 的框架**
+（native title 骨架、界面 kit、设置与模型管理那一套），感谢原作者 cobanov
+以 GPL-3.0 开源；[PS5SD](https://github.com/Darkatek7/PS5SD) 是同在 PS5 上的
+stable-diffusion.cpp 项目，本项目的图像/视频引擎方案参考了它。两个都是 PS5
+homebrew 项目，代码和思路都给了很大帮助。
+
+其余致谢：llama.cpp（ggml / llama-server / mtmd）、stable-diffusion.cpp、
+VoxCPM.cpp（bluryar）与 VoxCPM（OpenBMB）、trellis.cpp（TRELLIS.2）、
+ps5-homebrew-ui、Noto Sans SC、PS5_Vulkan / PS5_Mesa（RADV）、ps5-payload-sdk、
+TacHen、ShadowMountPlus、ftpsrv。
 没有这些项目，PS5 上跑推理仍然只是「有人试过」。

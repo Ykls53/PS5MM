@@ -121,9 +121,23 @@ ftpsrv (port 2121) already injected.
 
 GPL-3.0-or-later. Derived from [cobanov/PS5LM](https://github.com/cobanov/PS5LM) (GPL-3.0).
 
-## Credits
+## Status: beta
 
-llama.cpp (ggml / llama-server / mtmd), stable-diffusion.cpp, VoxCPM.cpp (bluryar) and
-VoxCPM (OpenBMB), trellis.cpp (TRELLIS.2), ps5-homebrew-ui, Noto Sans SC,
-PS5_Vulkan / PS5_Mesa (RADV), ps5-payload-sdk, TacHen, ShadowMountPlus, ftpsrv.
+This is a **test build**; stability is not guaranteed. All five engines and six
+capabilities have been exercised on real hardware (text / image / video / voice
+cloning / 3D / interpolation), but edge cases, long-running sessions and other
+firmware versions will still bite. Bug reports are welcome — please open an issue.
+
+## Origins and credits
+
+The **frontend framework is based directly on [PS5LM](https://github.com/cobanov/PS5LM)**
+(native-title skeleton, UI kit, settings and model management), by cobanov under
+GPL-3.0. [PS5SD](https://github.com/Darkatek7/PS5SD) is a stable-diffusion.cpp
+project for the same console; this project's image/video engine design was informed
+by it. Both are PS5 homebrew projects, and both helped a lot — in code and in ideas.
+
+Other credits: llama.cpp (ggml / llama-server / mtmd), stable-diffusion.cpp,
+VoxCPM.cpp (bluryar) and VoxCPM (OpenBMB), trellis.cpp (TRELLIS.2),
+ps5-homebrew-ui, Noto Sans SC, PS5_Vulkan / PS5_Mesa (RADV), ps5-payload-sdk,
+TacHen, ShadowMountPlus, ftpsrv.
 Without these projects, inference on a PS5 would still be "someone tried it once".
