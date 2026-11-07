@@ -25,6 +25,7 @@ Settings load_settings(const char * path) {
     s.text_slot      = j.value("text_slot", s.text_slot);
     s.picture_slot   = j.value("picture_slot", s.picture_slot);
     s.speech_slot    = j.value("speech_slot", s.speech_slot);
+    s.video_slot     = j.value("video_slot", s.video_slot);
     s.kv_type       = j.value("kv_type", s.kv_type);
     s.sounds        = j.value("sounds", s.sounds);
     s.tools         = j.value("tools", s.tools);
@@ -69,6 +70,7 @@ bool save_settings(const char * path, const Settings & s) {
         { "auto_load", s.auto_load }, { "default_model", s.default_model },
         { "boot_models", s.boot_models }, { "ctx_cap", s.ctx_cap }, { "parallel_slots", s.parallel_slots },
         { "text_slot", s.text_slot }, { "picture_slot", s.picture_slot }, { "speech_slot", s.speech_slot },
+        { "video_slot", s.video_slot },
         { "kv_type", s.kv_type },     { "sounds", s.sounds },       { "tools", s.tools },
         { "introspect", s.introspect },
         { "scratch_limit_gib", s.scratch_limit_gib }, { "download_dir", s.download_dir },

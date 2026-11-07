@@ -8,3 +8,4 @@ third_party/stable-diffusion.cpp/
 *.bin
 *.gguf
 *.safetensors
+*.bak-*

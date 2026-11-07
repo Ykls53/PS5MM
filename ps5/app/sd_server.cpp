@@ -105,9 +105,14 @@ struct Engine {
 Engine            g_e;
 httplib::Server   g_svr;
 std::thread       g_thread;
+// 视频专用监听（8004）。共用 g_e，共用 g_e.mu。
+httplib::Server   g_svr_video;
+std::thread       g_thread_video;
 // worker 真的退出 listen 循环了吗：卡在模型加载里的线程永远不会置它。
 std::atomic<bool> g_worker_done{ false };
 std::atomic<bool> g_stop{ false };
+// 最近一次 ensure_ctx 要的是视频还是图片。生成期间界面靠它分辨谁在忙。
+std::atomic<bool> g_want_video{ false };
 // ---- 「正在加载」这件事必须能被外面看见 -------------------------------------
 // 所有请求共用一把 g_e.mu（ensure_ctx 是持锁调 new_sd_ctx 的）：加载期间别的
 // 请求全挤在这把锁上，httplib 的线程池被耗光，连 /health 都答不上来。
@@ -217,6 +222,7 @@ void start_load_watchdog(int gen) {
 // Loads the model this request needs, unloading the other set first.
 // Called with g_e.mu held (the free/load pair must not race a generation).
 bool ensure_ctx(bool want_video, std::string & err) {
+    g_want_video.store(want_video);   // 界面靠它分辨「谁在忙」
     const SdModels & m = g_e.set_for(want_video);
     // 指纹 = 这一套的全部路径。换模型集（图片 <-> 视频）时它会变。
     std::string key;
@@ -1009,6 +1015,24 @@ void on_inpaint(const httplib::Request & req, httplib::Response & res) {
     answer_pictures(pics, res);
 }
 
+// POST /unload — drop the picture/video model now, without leaving the app.
+// The next generation request loads it again (ensure_ctx).
+void on_unload(const httplib::Request &, httplib::Response & res) {
+    std::lock_guard<std::mutex> lock(g_e.mu);
+    const bool had = g_e.ctx != nullptr;
+    if (g_e.ctx != nullptr) {
+        free_sd_ctx(g_e.ctx);
+        g_e.ctx = nullptr;
+    }
+    g_e.loaded_key.clear();
+    g_e.ready     = false;
+    g_want_video  = false;
+    std::printf("ps5mm-sd: unloaded the model (had=%d)\n", (int) had);
+    std::fflush(nullptr);
+    res.set_content(json{ { "ok", true }, { "engine", "picture" }, { "unloaded", had } }.dump(),
+                    "application/json");
+}
+
 void on_health(const httplib::Request &, httplib::Response & res) {
     json out{ { "ok", true },
               { "engine", "picture" },
@@ -1035,6 +1059,7 @@ int sd_server_start(const SdModels & models, int port) {
     std::fflush(nullptr);
 
     g_svr.Get("/health", on_health);
+    g_svr.Post("/unload", on_unload);
     g_svr.Get("/sdapi/v1/options", on_options);
     g_svr.Post("/sdapi/v1/txt2img", on_txt2img);
     g_svr.Post("/sdapi/v1/txt2vid", on_txt2vid);
@@ -1082,9 +1107,48 @@ int sd_server_start(const SdModels & models, int port) {
     return 0;
 }
 
+int sd_server_start_video(int port) {
+    // 只挂视频那一条 + 探活。图片、媒体、插帧仍然只在主口上。
+    g_svr_video.Get("/health", on_health);
+    g_svr_video.Post("/unload", on_unload);
+    g_svr_video.Post("/sdapi/v1/txt2vid", on_txt2vid);
+    g_svr_video.set_pre_routing_handler([](const httplib::Request & req, httplib::Response & res) {
+        if (req.path == "/health") {
+            return httplib::Server::HandlerResponse::Unhandled;
+        }
+        if (g_load_stuck.load()) {
+            res.status = 503;
+            res.set_content(R"({"error":"上次加载超时，已放弃；重启 PS5MM 再来一次"})", "application/json");
+            return httplib::Server::HandlerResponse::Handled;
+        }
+        if (g_loading.load()) {
+            res.status = 503;
+            res.set_content(R"({"error":"model is loading, retry later"})", "application/json");
+            return httplib::Server::HandlerResponse::Handled;
+        }
+        return httplib::Server::HandlerResponse::Unhandled;
+    });
+    g_svr_video.set_read_timeout(120, 0);
+    g_svr_video.set_write_timeout(3600, 0);   // 一条 33 帧的片子是分钟级
+    g_svr_video.set_payload_max_length(4 * 1024 * 1024);
+    std::printf("ps5mm-sd: video routes on :%d (same context as the picture port)\n", port);
+    std::fflush(nullptr);
+    g_thread_video = std::thread([port] {
+        if (!g_svr_video.listen("0.0.0.0", port)) {
+            std::printf("ps5mm-sd: could not listen on %d (video)\n", port);
+            std::fflush(nullptr);
+        }
+    });
+    return 0;
+}
+
 void sd_server_terminate(void) {
     if (g_stop.exchange(true)) {
         return;
+    }
+    g_svr_video.stop();
+    if (g_thread_video.joinable()) {
+        g_thread_video.detach();
     }
     g_svr.stop();
     if (!g_thread.joinable()) {
@@ -1132,6 +1196,8 @@ int sd_server_preload(void) {
     std::fflush(nullptr);
     return 0;
 }
+
+bool sd_server_video_active(void) { return g_want_video.load(); }
 
 void sd_server_progress(int * step, int * steps) {
     if (step != nullptr) {

@@ -108,6 +108,10 @@ bool synthesize(const std::string & text, const std::string & voice, const std::
     std::unique_ptr<void, decltype(done)> busy_guard(reinterpret_cast<void *>(1), done);
     // The last request's tokens must go, or this one continues its sentence.
     llama_memory_clear(llama_get_memory(g_e.lctx), true);
+    // 上一句的临时图可能还挂在 allocator 上：清完 KV 再同步一次，
+    // 让 ggml 把这一轮算完的中间 buffer 还回去。实测第二句开始慢 14 倍，
+    // 怀疑就是这里没释放干净。
+    llama_synchronize(g_e.lctx);
 
     mtmd_helper::gen_audio gen(g_e.lctx, g_e.mctx);
     if (!gen.ctx) {
@@ -142,16 +146,23 @@ bool synthesize(const std::string & text, const std::string & voice, const std::
         err = "the prompt was refused";
         return false;
     }
+    const int64_t t_input = ggml_time_ms();
+    int           prefill_rounds = 0;
     for (;;) {
         const int32_t left = gen.step_prompt(kPromptBatch);
         if (left < 0) {
             err = "prompt processing failed";
             return false;
         }
+        prefill_rounds++;
         if (left == 0) {
             break;
         }
     }
+    const int64_t t_prefill = ggml_time_ms();
+    std::printf("ps5mm-tts: set_input %lld ms, prefill %lld ms (%d rounds)\n",
+                (long long) (t_input - t0), (long long) (t_prefill - t_input), prefill_rounds);
+    std::fflush(nullptr);
 
     llama_sampler_chain_params sparams = llama_sampler_chain_default_params();
     llama_sampler *           smpl     = llama_sampler_chain_init(sparams);
@@ -164,6 +175,7 @@ bool synthesize(const std::string & text, const std::string & voice, const std::
     bool          stop    = false;
     llama_token   sampled = llama_sampler_sample(smpl, g_e.lctx, -1);
     const float * h       = llama_get_embeddings_ith(g_e.lctx, -1);
+    int64_t t_gen = ggml_time_ms();
     while (!stop && frames < kMaxFrames) {
         const float * h_next = nullptr;
         if (gen.step_gen(sampled, h, &h_next, &stop) != 0) {
@@ -175,6 +187,13 @@ bool synthesize(const std::string & text, const std::string & voice, const std::
             break;   // stopped without a frame
         }
         frames++;
+        if (frames % 10 == 0) {
+            const int64_t now = ggml_time_ms();
+            std::printf("ps5mm-tts:   frame %d, avg %.0f ms/frame\n", frames,
+                        (double) (now - t_gen) / 10.0);
+            std::fflush(nullptr);
+            t_gen = now;
+        }
         h       = h_next;
         sampled = llama_sampler_sample(smpl, g_e.lctx, -1);
     }

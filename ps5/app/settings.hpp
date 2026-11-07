@@ -27,6 +27,9 @@ struct Settings {
     int         text_slot    = 1;
     int         picture_slot = 2;
     int         speech_slot  = 3;
+    // 视频单独占一个槽位（8004 by default）。它和 picture_slot 走同一条
+    // port_of_slot 路径，所以设置里照样能改端口。
+    int         video_slot   = 4;
     std::string kv_type   = "auto"; // "auto", "f16", "q8_0" or "q4_0"
     bool        sounds    = true;
     bool        tools     = true;   // file tools in the browser chat, inside the scratch folder

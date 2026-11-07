@@ -36,6 +36,7 @@
 #include <vector>
 
 #include "tts_server.hpp"
+#include "voxcpm_server.hpp"
 #include "sd_server.hpp"
 // 退出通道要起一个自己的 listener，用的就是各引擎那份 httplib。
 // 链接时它早就在了，这里只是把这个头引进当前 translation unit。
@@ -69,13 +70,7 @@
 #include "platform/ps5/pad.hpp"
 #include "platform/ps5/system.hpp"
 #include "ui/fonts.hpp"
-#include "audio_server.hpp"
 #include "trellis_server.hpp"
-
-// audio.cpp's C API (include/audiocpp.h upstream). Declared here rather than
-// including the header: the engine's other declarations would drag its own
-// copies of ggml types into this translation unit.
-extern "C" int audiocpp_abi_version(void);
 
 int  llama_server(int argc, char ** argv);
 void llama_server_terminate();
@@ -359,6 +354,7 @@ void exit_the_app(const char * why) {
     std::printf("ps5mm-exit: %s\n", why);
     std::fflush(nullptr);
     tts_server_terminate();
+    voxcpm_server_terminate();
     sd_server_terminate();
     std::fflush(nullptr);
     exit_to_home();
@@ -408,6 +404,7 @@ void quit_if_asked() {
     unlink(kQuit);
     std::printf("ps5lm-app: quit requested\n");
     tts_server_terminate();
+    voxcpm_server_terminate();
     sd_server_terminate();
     std::fflush(nullptr);
     exit_to_home();
@@ -520,6 +517,7 @@ std::string base_name(const std::string & path) {
 // ---- the server thread ------------------------------------------------------------
 
 std::atomic<int> g_server_rc{ -1 };   // llama-server's exit code once it returns; -1 while it runs
+std::atomic<bool> g_speech_voxcpm{ false };   // speech slot is served by VoxCPM, not llama.cpp
 std::vector<std::string> g_server_args;
 
 void * run_server(void *) {
@@ -792,7 +790,9 @@ bool load_font(hui::gfx::Renderer & renderer, const char * name, hui::gfx::Font 
 
 }  // namespace
 
-int main(int, char **) {
+
+int main(int argc, char ** argv) {
+
     // /data first: the log, the settings and the models live there.
     const std::string data = open_data();
     // stdout and stderr to a file the PC can fetch over FTP.
@@ -808,11 +808,7 @@ int main(int, char **) {
         setvbuf(stderr, s_err_buf, _IOFBF, sizeof s_err_buf);
     }
     std::printf("ps5lm-app: version " PS5LM_VERSION "\n");
-    // The audio engine (audio.cpp, ACX_ prefixed): one call proves the C API is
-    // reachable from this binary. Static libraries only pull their objects in
-    // when something references them, so without this the whole engine would be
-    // silently dropped at link time.
-    std::printf("ps5mm-app: audio abi %d\n", audiocpp_abi_version());
+    // audio.cpp 引擎已移除（2026-11-05）：8004 那个槽位改给视频。
     std::printf("ps5lm-app: /data %s\n", data.c_str());
     if (data.rfind("closed", 0) == 0) {
         notify("PS5MM 写不了 /data。OnionHEN 下把 PPSA99577 加进 app_jailbreak.exact_title_ids "
@@ -1074,21 +1070,41 @@ int main(int, char **) {
                                                : boot.tts_mmproj;
         const std::string voices_dir = boot.voices_dir;
         const int         tts_slot   = boot.speech_slot;
-        // 语音引擎 = llama.cpp（tts_server），保守版。
-        // 这条路在 PS5 上有过出音频的记录；但 tts_server 里已经把主模型和投影器
-        // 都钉在 CPU 上（GPU 上实测会锁死整个进程），所以是「能用但慢」。
-        std::thread([tts_model, tts_codec, voices_dir, tts_slot] {
-            if (tts_model.empty() || access(tts_model.c_str(), F_OK) != 0 || tts_codec.empty() ||
-                access(tts_codec.c_str(), F_OK) != 0) {
+        // 语音引擎二选一：
+        //   tts_backbone 指向 VoxCPM 的单文件 GGUF（名字里带 voxcpm）→ VoxCPM.cpp（Vulkan）
+        //   否则走原来的 llama.cpp Qwen3-TTS（CPU，需要 mmproj）
+        // VoxCPM 无状态、单文件、跑 Vulkan；老引擎连发会退化，且 GPU 上会锁死进程。
+        const bool use_voxcpm = tts_model.find("voxcpm") != std::string::npos;
+        g_speech_voxcpm = use_voxcpm;
+        std::thread([tts_model, tts_codec, voices_dir, tts_slot, use_voxcpm] {
+            if (tts_model.empty() || access(tts_model.c_str(), F_OK) != 0) {
                 std::printf("ps5mm-app: no speech model (see Settings)\n");
                 std::fflush(nullptr);
-                if (!tts_model.empty()) {
+                if (!tts_model.empty() && !use_voxcpm) {
                     tts_server_abandon();
                 }
                 return;
             }
             const int speech_port = ps5mm::port_of_slot(tts_slot);
-            std::printf("ps5mm-app: speech engine (llama.cpp, CPU) on :%d (%s)\n", speech_port, tts_model.c_str());
+            if (use_voxcpm) {
+                std::printf("ps5mm-app: speech engine (VoxCPM, Vulkan) on :%d (%s)\n", speech_port,
+                            tts_model.c_str());
+                std::fflush(nullptr);
+                if (voxcpm_server_start(tts_model.c_str(), voices_dir.c_str(), speech_port) == 0) {
+                    notify(("PS5MM: speech ready on :" + std::to_string(speech_port)).c_str());
+                } else {
+                    notify("PS5MM: the speech model did not load; text still works");
+                }
+                return;
+            }
+            if (tts_codec.empty() || access(tts_codec.c_str(), F_OK) != 0) {
+                std::printf("ps5mm-app: no speech codec (see Settings)\n");
+                std::fflush(nullptr);
+                tts_server_abandon();
+                return;
+            }
+            std::printf("ps5mm-app: speech engine (llama.cpp, CPU) on :%d (%s)\n", speech_port,
+                        tts_model.c_str());
             std::fflush(nullptr);
             if (tts_server_start(tts_model.c_str(), tts_codec.c_str(), voices_dir.c_str(), speech_port) == 0) {
                 notify(("PS5MM: speech ready on :" + std::to_string(speech_port)).c_str());
@@ -1097,48 +1113,35 @@ int main(int, char **) {
             }
         }).detach();
 
-        // 音频引擎：audio.cpp 的 C API，占第一个空闲槽位。
-        // 懒加载：只起路由，第一次请求才 load。模型路径来自 settings。
+        // audio.cpp 引擎已移除（2026-11-05）：
+        //   5 次真机尝试全部失败，它的 model_load 一进去就不返回，还会把整个
+        //   payload 链拖死（只能物理关机）。它的 gguf 是自家格式，和 llama/sd
+        //   的约定不兼容。8004 这个槽位改给视频用。
+        //   代码和 .deps/audio-acx 都留着，需要时能随时接回来。
+
+        // 视频入口：和图片共用同一个 sd 上下文（12 GiB 装不下两套权重），
+        // 但挂在独立端口上，前端能分开调。忙的时候 503，不会把请求排死。
         {
-            int audio_slot = 0;
-            for (int s = 1; s <= 5; ++s) {
-                if (s != boot.text_slot && s != boot.picture_slot && s != boot.speech_slot) {
-                    audio_slot = s;
-                    break;
-                }
-            }
-            if (audio_slot != 0) {
-                const int audio_port = ps5mm::port_of_slot(audio_slot);
-                std::thread([audio_port, a_model = boot.audio_model, a_dir = boot.audio_dir,
-                             a_vref = boot.audio_voice_ref, a_vtext = boot.audio_voice_text] {
-                    AudioModels audio_models{ a_model.c_str(), "tts", a_dir.c_str(), a_vref.c_str(),
-                                              a_vtext.c_str() };
-                    std::printf("ps5mm-app: audio engine on :%d (loads on first request)\n", audio_port);
-                    std::fflush(nullptr);
-                    if (audio_server_start(audio_models, audio_port) != 0) {
-                        notify("PS5MM: the audio engine did not start");
-                        return;
-                    }
-                    notify(("PS5MM: audio on :" + std::to_string(audio_port)).c_str());
-                }).detach();
-            }
+            const int video_port = ps5mm::port_of_slot(boot.video_slot);
+            std::printf("ps5mm-app: video route on :%d\n", video_port);
+            std::fflush(nullptr);
+            sd_server_start_video(video_port);
         }
 
-        // 3D 引擎：TRELLIS.2 图生 3D（TRX_ 前缀），占 audio 之后的下一个空闲槽位。
+        // 3D 引擎：TRELLIS.2 图生 3D（TRX_ 前缀），占 video 之后的下一个空闲槽位。
         // 模型约定在 /data/PS5MM/trellis/（trellis.gguf / naf.gguf / birefnet.gguf）。
         {
+            // 3D 取第一个没被前面四个引擎占用的槽位。
+            // （原来写的是「第二个空闲」，那是给 audio 留位的年代；audio 删掉之后
+            //   只剩一个空位，那个算法永远取不到值，3D 压根没启动。）
             int slot3d = 0;
-            int taken  = 0;
             for (int s = 1; s <= 5; ++s) {
-                if (s == boot.text_slot || s == boot.picture_slot || s == boot.speech_slot) {
+                if (s == boot.text_slot || s == boot.picture_slot || s == boot.speech_slot ||
+                    s == boot.video_slot) {
                     continue;
                 }
-                // 第一个空闲给 audio，第二个给 3D
-                if (taken == 1) {
-                    slot3d = s;
-                    break;
-                }
-                taken++;
+                slot3d = s;
+                break;
             }
             if (slot3d != 0) {
                 const int p3d = ps5mm::port_of_slot(slot3d);
@@ -1286,23 +1289,26 @@ int main(int, char **) {
             c.kind    = "picture";
             int step = 0, steps = 0;
             sd_server_progress(&step, &steps);
-            const bool live_route = sd_server_listening();
-            const bool loaded     = sd_server_ready();
+            // 图片和视频共用一套 sd 上下文：要问一句这次跑的是谁，
+            // 否则跑视频的时候图片卡也写着「生成中」。
+            const bool busy_picture = step > 0 && steps > 0 && !sd_server_video_active();
+            const bool live_route   = sd_server_listening();
+            const bool loaded       = sd_server_ready();
             c.state   = st.sd_diffusion.empty() ? "未配置"
-                      : !live_route             ? "未启动"
-                      : step > 0 && steps > 0   ? "生成中"
-                      : loaded                  ? "就绪"
-                                                : "等第一次请求";
+                      : !live_route            ? "未启动"
+                      : busy_picture           ? "生成中"
+                      : loaded                 ? "就绪"
+                                               : "等第一次请求";
             c.model     = st.sd_diffusion;
             c.loaded    = loaded;   // 懒加载时 false：下面的数字是「预计」，不算已用
             c.model_gib = file_gib(st.sd_diffusion) + file_gib(st.sd_t5xxl) + file_gib(st.sd_vae) +
                           file_gib(st.sd_clip_l) + file_gib(st.sd_clip_g);
-            c.step      = step;
-            c.steps     = steps;
+            c.step      = busy_picture ? step : 0;
+            c.steps     = busy_picture ? steps : 0;
             c.width     = (int) st.sd_width;
             c.height    = (int) st.sd_height;
-            c.frames    = st.sd_frames;
-            c.fps       = st.sd_fps;
+            c.frames    = 0;   // 帧数是视频的属性，别混进图片卡
+            c.fps       = 0;
             c.cfg       = st.sd_cfg_x10 / 10.0;
             if (step > 0 && steps > 0) {
                 c.activity = "第 " + std::to_string(step) + " / " + std::to_string(steps) + " 步";
@@ -1319,9 +1325,9 @@ int main(int, char **) {
             c.port      = ps5mm::port_of_slot(st.speech_slot);
             c.name      = "语音";
             c.kind      = "speech";
-            const int tts = tts_server_status();
+            const int tts = g_speech_voxcpm ? voxcpm_server_status() : tts_server_status();
             c.state     = st.tts_backbone.empty() ? "未配置"
-                        : tts == 2                ? (tts_server_busy() ? "生成中" : "就绪")
+                        : tts == 2                ? ((g_speech_voxcpm ? voxcpm_server_busy() : tts_server_busy()) ? "生成中" : "就绪")
                         : tts == 1                ? "加载中"
                         : tts == -1               ? "出错"
                                                   : "未启动";
@@ -1330,50 +1336,51 @@ int main(int, char **) {
             c.model_gib = file_gib(st.tts_backbone) + file_gib(st.tts_mmproj);
             c.lang      = st.tts_lang;
             c.voice     = base_name_of(st.voices_dir);
-            c.requests  = (uint64_t) tts_server_requests();
+            c.requests  = (uint64_t) (g_speech_voxcpm ? voxcpm_server_requests() : tts_server_requests());
             if (c.requests > 0) {
                 c.activity = "已合成 " + std::to_string((unsigned long long) c.requests) + " 段语音";
             }
             cards.push_back(std::move(c));
         }
-        // 音频引擎卡：占第一个没被三个真引擎用掉的槽位。
+        // 视频引擎卡：和图片共用 sd 上下文，但端口独立。
         {
-            int audio_slot = 0;
-            for (int s = 1; s <= 5; ++s) {
-                if (s != st.text_slot && s != st.picture_slot && s != st.speech_slot) {
-                    audio_slot = s;
-                    break;
-                }
-            }
-            if (audio_slot != 0) {
-                EngineCard c;
-                c.slot   = audio_slot;
-                c.port   = ps5mm::port_of_slot(audio_slot);
-                c.name   = "音频";
-                c.kind   = "audio";
-                c.state  = audio_server_ready()     ? "就绪"
-                         : audio_server_listening() ? "等请求"
-                                                    : "未启动";
-                c.detail = audio_server_family().empty() ? "130+ 音频家族" : audio_server_family();
-                if (audio_server_last_ms() > 0) {
-                    c.activity = std::to_string(audio_server_last_ms()) + " ms";
-                }
-                cards.push_back(std::move(c));
-            }
+            EngineCard c;
+            c.slot     = st.video_slot;
+            c.port     = ps5mm::port_of_slot(st.video_slot);
+            c.name     = "视频";
+            c.kind     = "video";
+            int vstep = 0, vsteps = 0;
+            sd_server_progress(&vstep, &vsteps);
+            const bool busy_video = vstep > 0 && vsteps > 0 && sd_server_video_active();
+            const bool sd_loaded  = sd_server_ready();
+            c.state    = st.sd_video.empty() ? "未配置"
+                       : !sd_server_listening() ? "未启动"
+                       : busy_video           ? "生成中"
+                       : sd_loaded && sd_server_video_active() ? "就绪"
+                                              : "等请求";
+            c.model    = st.sd_video;
+            c.loaded   = sd_loaded && sd_server_video_active();
+            c.model_gib = file_gib(st.sd_video) + file_gib(st.sd_video_t5xxl) + file_gib(st.sd_video_vae);
+            c.step     = busy_video ? vstep : 0;
+            c.steps    = busy_video ? vsteps : 0;
+            c.width    = (int) st.sd_width;
+            c.height   = (int) st.sd_height;
+            c.frames   = (int) st.sd_frames;
+            c.fps      = (int) st.sd_fps;
+            c.detail   = busy_video ? ("第 " + std::to_string(vstep) + " / " + std::to_string(vsteps) + " 步")
+                                    : "和图片共用一套 sd 上下文（12 GiB 装不下两套）";
+            cards.push_back(std::move(c));
         }
         // 3D 引擎卡
         {
             int slot3d = 0;
-            int taken  = 0;
             for (int s = 1; s <= 5; ++s) {
-                if (s == st.text_slot || s == st.picture_slot || s == st.speech_slot) {
+                if (s == st.text_slot || s == st.picture_slot || s == st.speech_slot ||
+                    s == st.video_slot) {
                     continue;
                 }
-                if (taken == 1) {
-                    slot3d = s;
-                    break;
-                }
-                taken++;
+                slot3d = s;
+                break;
             }
             if (slot3d != 0) {
                 EngineCard c;
@@ -1412,18 +1419,9 @@ int main(int, char **) {
                     continue;
                 }
             }
-            // 音频引擎也占一个空闲槽位，跳开它。
-            {
-                int audio_slot = 0;
-                for (int q = 1; q <= 5; ++q) {
-                    if (q != st.text_slot && q != st.picture_slot && q != st.speech_slot) {
-                        audio_slot = q;
-                        break;
-                    }
-                }
-                if (s == audio_slot) {
-                    continue;
-                }
+            // 视频槽位也是真引擎，跳开它。
+            if (s == st.video_slot) {
+                continue;
             }
             EngineCard c;
             c.slot     = s;

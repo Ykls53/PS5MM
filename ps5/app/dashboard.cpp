@@ -146,8 +146,7 @@ enum class Setting : int {
     sd_size, sd_steps, sd_cfg,
     // 性能旋钮（0 = 自动，由 caps 层实测推导）。冒烟测试靠这几行在电视上扫参数，不用重编。
     cpu_threads, vae_tile, ubatch, max_frames, force_pro,
-    // 音频 / 3D 引擎的模型位置
-    audio_model,
+    // 3D 引擎（槽位 5）的模型位置
     // 帧插值开关（默认关：ncnn 的 Vulkan 路径会崩进程）
     interp_enabled,
 };
@@ -180,10 +179,10 @@ constexpr SettingCategory kCategories[] = {
         { Setting::ubatch, "批大小", "prefill 一次吃多少 token；大 = 长提示更快，也更吃内存" } },
       6 },
     { "语音引擎",
-      { { Setting::tts_backbone, "语音模型", "Qwen3-TTS 的主 GGUF，说话的那一半" },
-        { Setting::tts_mmproj, "codec", "和主模型配套的 mmproj，缺了说不出话" },
-        { Setting::voices_dir, "音色目录", "参考音色 wav 放这里，请求里写文件名" },
-        { Setting::tts_lang, "语言", "说话用哪种语言；音色本身是中性的" } },
+      { { Setting::tts_backbone, "语音模型", "VoxCPM 单文件 GGUF（talker + AudioVAE 都在这一个里）" },
+        { Setting::tts_mmproj, "codec", "VoxCPM 不需要；老的 Qwen3-TTS 才要，留空即可" },
+        { Setting::voices_dir, "音色目录", "参考音色 wav 放这里，再放同名 .txt 写它的台词" },
+        { Setting::tts_lang, "语言", "预留；VoxCPM 按参考音色说中文" } },
       4 },
     { "图像引擎",
       { { Setting::sd_diffusion, "图像模型", "SD、SDXL、Flux、Qwen-Image 都行，第一次用时才加载" },
@@ -219,9 +218,8 @@ constexpr SettingCategory kCategories[] = {
           "关：/v1/introspect 关闭。开：输出原始数值。改动会重启模型" },
         { Setting::cpu_threads, "CPU 线程", "所有引擎共用；自动 = 核数 - 1，夹 4..8" },
         { Setting::force_pro, "按 Pro 跑", "RADV 在标准版和 Pro 上都报 NAVI21，设备名分不出；这开关强行按 Pro 档走" },
-        { Setting::audio_model, "音频模型", "audio.cpp 的 GGUF；没有就只起路由，等第一次请求" },
-        { Setting::interp_enabled, "补帧", "RIFE 走 ncnn+Vulkan，这台机器上一跑就崩；默认关，修好再开" } },
-      7 },
+        { Setting::interp_enabled, "补帧", "RIFE 走 ncnn+Vulkan；实测 256×256 92 ms，8002 /media/v1/interpolate" } },
+      6 },
 };
 constexpr int kCategoryCount = 8;   // 日志搬到「监控」页了，这里只剩配置
 
@@ -590,13 +588,6 @@ std::string setting_text(const Settings & s, Setting id, const std::vector<Model
                                         : (s.vae_tile < 0 ? "关闭分块" : (std::to_string(s.vae_tile) + " px"));
         case Setting::ubatch:      return s.ubatch == 0 ? "自动（按池子）" : std::to_string(s.ubatch);
         case Setting::max_frames:  return s.max_frames == 0 ? "自动（按池子）" : (std::to_string(s.max_frames) + " 帧");
-        case Setting::audio_model: {
-            if (s.audio_model.empty()) {
-                return "无";
-            }
-            const size_t slash = s.audio_model.find_last_of('/');
-            return slash == std::string::npos ? s.audio_model : s.audio_model.substr(slash + 1);
-        }
         case Setting::download_dir: {
             for (const auto & d : drives) {
                 if (d.models == s.download_dir) {
@@ -799,23 +790,6 @@ std::vector<Choice> choices_of(const Settings & s, Setting id, const std::vector
             }
             break;
         }
-        case Setting::audio_model: {
-            Settings scratch = s;
-            add("默认 /data/PS5MM/audio/model.gguf", "放在 app 自己的目录里",
-                scratch.audio_model == "/data/PS5MM/audio/model.gguf",
-                [](Settings & v) { v.audio_model = "/data/PS5MM/audio/model.gguf"; });
-            for (const auto & m : models) {
-                // audio.cpp 吃 gguf；别的扩展名别列进来
-                if (m.file.size() < 5 || m.file.rfind(".gguf") != m.file.size() - 5) {
-                    continue;
-                }
-                std::string name, build;
-                split_name(m.label, &name, &build);
-                add(name + "  " + build, gb(m.size_gib), scratch.audio_model == m.file,
-                    [file = m.file](Settings & v) { v.audio_model = file; });
-            }
-            break;
-        }
         case Setting::cpu_threads:
             for (int n : kThreadSteps) {
                 add(n == 0 ? "自动" : (std::to_string(n) + " 线程"), n == 0 ? "核数 - 1，夹 4..8" : "",
@@ -876,7 +850,7 @@ std::vector<Choice> choices_of(const Settings & s, Setting id, const std::vector
             break;
         }
         case Setting::tts_lang: {
-            // Qwen3-TTS 的音色是中性参考音，语种在这里点一句它就跟上
+            // 语言选项：VoxCPM 目前按参考音色的中文说话，这里先留着
             static const char * langs[][2] = { { "zh", "中文" }, { "en", "英文" }, { "ja", "日文" },
                                                { "ko", "韩文" }, { "fr", "法文" }, { "de", "德文" },
                                                { "es", "西班牙文" } };
@@ -1202,7 +1176,7 @@ std::vector<const ModelRow *> slot_items(int slot, const std::vector<ModelRow> &
         if (parts) {
             continue;
         }
-        // 槽位 3 是语音，槽位 4 是音频（audio.cpp 吃 gguf），槽位 5 是三维。
+        // 槽位 3 是语音，槽位 4 是视频，槽位 5 是三维。
         // 后两个引擎其实读固定路径（见下面 update_slots 的说明），这里只是让候选
         // 列表别空着误导人。
         const bool is_gguf = m.file.size() > 5 &&
@@ -1832,7 +1806,9 @@ void Dashboard::draw_overview(gfx::DrawList & l) const {
     put(l, f.regular, tail, kRight, kTitleY, 21, kInk3, gfx::Align::right);
 
     constexpr int   kStrips = 5;
-    const float     top = 214, bottom = 856;
+    // bottom 从 856 收到 836：下面那条内存总线在 884，原来只隔 28px，
+    // 卡片里的纵向推子和横条在视觉上贴住/交叉。
+    const float     top = 214, bottom = 836;
     const float     gap = 20;
     const float     sw = ((kRight - kLeft) - gap * (kStrips - 1)) / kStrips;
 
@@ -1905,7 +1881,13 @@ void Dashboard::draw_overview(gfx::DrawList & l) const {
                           c->kv_type.empty() ? "auto" : c->kv_type.c_str());
             put(l, f.regular, line, r.x + 34, ay, 20, kInk3);
         } else if (kind == "picture" && c->width > 0) {
-            std::snprintf(line, sizeof line, "%d×%d · %d 帧 · %d 步", c->width, c->height, c->frames, c->steps);
+            // 图片只说尺寸和步数。帧数是视频的属性，混进图片卡会让人看不明白
+            // （实测：256×256 的图片，卡上写着「5 帧」）。
+            std::snprintf(line, sizeof line, "%d×%d · %d 步", c->width, c->height, c->steps);
+            put(l, f.regular, line, r.x + 34, ay, 20, kInk3);
+        } else if (kind == "video" && c->width > 0) {
+            std::snprintf(line, sizeof line, "%d×%d · %d 帧 · %d 步", c->width, c->height, c->frames,
+                          c->steps);
             put(l, f.regular, line, r.x + 34, ay, 20, kInk3);
         } else if (kind == "speech" && !c->lang.empty()) {
             std::snprintf(line, sizeof line, "%s · 音色 %s", c->lang.c_str(),
@@ -1946,8 +1928,9 @@ void Dashboard::draw_overview(gfx::DrawList & l) const {
         put(l, f.regular, real ? "内存" : "未加载", cx, r.y + r.h - 28, 16, kInk3, gfx::Align::center);
     }
 
-    // 底部：内存总线。五个席位的占用按模态色分段，谁吃了多少一目了然。
-    const Rect bar{ kLeft, 884, kRight - kLeft, 28 };
+    // 底部：内存总线。横向一条，高度从 28 收到 18，位置下移到 892，
+    // 和上面的卡片拉开距离（卡片底边 836）。
+    const Rect bar{ kLeft, 892, kRight - kLeft, 18 };
     l.rounded_rect(bar, 14, kHair);
     if (live_.pool_gib > 0.01 && !live_.engines.empty()) {
         float  x    = bar.x;
@@ -1969,17 +1952,17 @@ void Dashboard::draw_overview(gfx::DrawList & l) const {
             if (gib <= 0.001 || c.reserved || !c.loaded) {
                 continue;
             }
-            l.rounded_rect({ lx, bar.y + 44, 12, 12 }, 3, mod_color(c.kind));
-            lx += 20;
+            l.rounded_rect({ lx, bar.y + 30, 10, 10 }, 3, mod_color(c.kind));
+            lx += 18;
             char part[64];
             std::snprintf(part, sizeof part, "%s %.1f", c.name.c_str(), gib);
-            lx += put(l, f.regular, part, lx, bar.y + 56, 19, kInk3) + 26;
+            lx += put(l, f.regular, part, lx, bar.y + 38, 18, kInk3) + 24;
         }
-        l.rounded_rect({ lx, bar.y + 44, 12, 12 }, 3, kHair);
-        lx += 20;
+        l.rounded_rect({ lx, bar.y + 30, 10, 10 }, 3, kHair);
+        lx += 18;
         char rest[64];
         std::snprintf(rest, sizeof rest, "空闲 %.1f GB", std::max(0.0, live_.pool_gib - used));
-        put(l, f.regular, rest, lx, bar.y + 56, 19, kInk3);
+        put(l, f.regular, rest, lx, bar.y + 38, 18, kInk3);
     }
 }
 
@@ -2303,7 +2286,7 @@ void Dashboard::draw_slots(gfx::DrawList & l, const Rect & a) const {
         put(l, f.semibold, c->state, a.x + a.w - 28, y + 50, 22, sc, gfx::Align::right);
     }
     // 底注：语音和图像的引擎约束，摆明不说谎。
-    put(l, f.regular, "X 指派模型 · □ 加载／卸载 · 语音槽只随启动加载，图像槽没有运行中卸载", a.x + 28,
+    put(l, f.regular, "X 指派模型 · □ 加载／卸载 · 语音槽只随启动加载，卸载后需重开 app", a.x + 28,
         a.y + kRowPitch * 5 + 30, 19, kInk3);
 }
 

@@ -116,6 +116,32 @@ cmake -S "$sd" -B "$out/sd" -G Ninja \
     { tail -30 "$out/sd.configure.log" >&2; exit 1; }
 cmake --build "$out/sd" --target stable-diffusion
 
+# ---- the speech engine, second generation: VoxCPM.cpp, a third ggml ---------
+# One GGUF (talker + AudioVAE), stateless per request, Vulkan only. Its ggml is
+# the third copy in this image; scripts/prefix-voxcpm.sh renames everything
+# outside the voxcpm:: namespace to VXC_ so the three copies coexist.
+voxcpm_src=${VOXCPM_SRC:-/home/yk/VoxCPM.cpp}
+if [ -d "$voxcpm_src" ]; then
+    cmake -S "$voxcpm_src" -B "$out/voxcpm" -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE="$root/ps5/app/toolchain.cmake" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$cxxflags" \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DVOXCPM_VULKAN=ON -DVOXCPM_NATIVE=OFF \
+        -DVOXCPM_BUILD_EXAMPLES=OFF -DVOXCPM_BUILD_BENCHMARK=OFF -DVOXCPM_BUILD_TESTS=OFF \
+        -DVOXCPM_ENABLE_MP3=OFF -DVOXCPM_ENABLE_OPUS=OFF \
+        -DGGML_BACKEND_DL=OFF -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=OFF \
+        -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON -DGGML_BMI2=ON -DGGML_AVX512=OFF \
+        -DGGML_OPENMP=OFF -DGGML_CCACHE=OFF \
+        -DVulkan_INCLUDE_DIR="$headers/include" -DVulkan_LIBRARY="$archive" \
+        -DVulkan_GLSLC_EXECUTABLE="$(command -v glslc)" -DSPIRV-Headers_DIR="$headers/cmake" \
+        -DMATH_LIBRARY=SceLibcInternal > "$out/voxcpm.configure.log" 2>&1 ||
+        { tail -30 "$out/voxcpm.configure.log" >&2; exit 1; }
+    cmake --build "$out/voxcpm" --target voxcpm
+else
+    echo "build-app: speech engine (VoxCPM): not linked (no $voxcpm_src)"
+fi
+
 # The app's own objects, and the title's start code from PS5_Vulkan.
 obj="$out/obj"
 mkdir -p "$obj" "$out/stubs"
@@ -127,6 +153,14 @@ cxx -fexceptions -fcxx-exceptions -c "$root/ps5/app/model_plan.cpp" -o "$obj/mod
 cxx -std=c++20 -fexceptions -fcxx-exceptions -I "$llama/include" -I "$llama/ggml/include" -I "$root/ps5/app" -c "$root/ps5/app/adaptive.cpp" -o "$obj/adaptive.o"
 # The speech engine: llama.cpp's mtmd (Qwen3-TTS voice cloning) in this process, beside the text one.
 cxx -std=c++20 -fexceptions -fcxx-exceptions -I "$llama/include" -I "$llama/ggml/include" -I "$llama/tools/mtmd" -I "$llama/vendor" -c "$root/ps5/app/tts_server.cpp" -o "$obj/tts_server.o"
+# The second speech engine: VoxCPM.cpp, same endpoint, Vulkan instead of CPU.
+if [ -d "${VOXCPM_SRC:-/home/yk/VoxCPM.cpp}" ]; then
+    cxx -std=c++20 -fexceptions -fcxx-exceptions \
+        -I "${VOXCPM_SRC:-/home/yk/VoxCPM.cpp}/include" \
+        -I "${VOXCPM_SRC:-/home/yk/VoxCPM.cpp}/third_party/ggml/include" \
+        -I "$root/third_party/ps5-homebrew-ui/src" \
+        -I "$llama/vendor" -c "$root/ps5/app/voxcpm_server.cpp" -o "$obj/voxcpm_server.o"
+fi
 # The image engine: stable-diffusion.cpp and its own ggml, in this process.
 cxx -std=c++20 -fexceptions -fcxx-exceptions -I "$sd/include" -I "$sd/thirdparty" -I "$sggml/include" -I "$llama/vendor" -c "$root/ps5/app/sd_server.cpp" -o "$obj/sd_server.o"
 # The media engine: FFmpeg, hung under the picture engine's port.
@@ -307,6 +341,15 @@ mapfile -t libs < <(find "$out/llama" -name '*.a' | sort)
 # next to RADV's; llama.cpp's ggml keeps the global names.
 bash "$root/scripts/prefix-sd.sh"
 sdlibs=()
+# ---- the speech engine's ggml, VXC_ prefixed --------------------------------
+voxlibs=()
+if [ -d "$out/voxcpm" ]; then
+    bash "$root/scripts/prefix-voxcpm.sh"
+    while read -r rel; do voxlibs+=("$out/voxcpm/$rel"); done < "$out/voxcpm/archives.txt"
+    echo "build-app: speech engine (VoxCPM): ${#voxlibs[@]} VXC_ archive(s)"
+else
+    echo "build-app: speech engine (VoxCPM): not linked"
+fi
 # ---- the audio engine: audio.cpp, a third ggml, ACX_ prefixed ---------------
 # The libraries come from src/prefix-audio.sh, which runs on an audio.cpp cross
 # build (that build needs its own configure flags, so it is not part of this
@@ -411,9 +454,9 @@ while read -r rel; do sdlibs+=("$out/sd/$rel"); done < "$out/sd/archives.txt"
 "$sdk/bin/prospero-lld" --error-limit=0 "${radv_linker_script[@]}" --eh-frame-hdr "${radv_link_flags[@]}" \
     --version-script "$vk/tooling/native/app-symbols.map" --exclude-libs=ALL \
     -e _start -o "$out/llvm-pie.elf" \
-    "$obj/app_crt.o" "$obj/app_cpp_runtime.o" "$obj/tls_stub.o" "$obj/main.o" "$obj/display.o" "$obj/model_plan.o" "$obj/adaptive.o" "$obj/settings.o" "$obj/tts_server.o" "$obj/sd_server.o" "$obj/media_server.o" ${rifeobj[@]+"${rifeobj[@]}"} ${audio_obj[@]+"${audio_obj[@]}"} "$obj/fetch.o" "$obj/market.o" "$obj/activity.o" "$obj/sha256.o" "$obj/dashboard.o" "$obj/stats.o" \
+    "$obj/app_crt.o" "$obj/app_cpp_runtime.o" "$obj/tls_stub.o" "$obj/main.o" "$obj/display.o" "$obj/model_plan.o" "$obj/adaptive.o" "$obj/settings.o" "$obj/tts_server.o" "$obj/voxcpm_server.o" "$obj/sd_server.o" "$obj/media_server.o" ${rifeobj[@]+"${rifeobj[@]}"} ${audio_obj[@]+"${audio_obj[@]}"} "$obj/fetch.o" "$obj/market.o" "$obj/activity.o" "$obj/sha256.o" "$obj/dashboard.o" "$obj/stats.o" \
     ${trellis_obj[@]+"${trellis_obj[@]}"} \
-    --start-group "${libs[@]}" "${sdlibs[@]}" ${audiolibs[@]+"${audiolibs[@]}"} ${trxlibs[@]+"${trxlibs[@]}"} ${avlibs[@]+"${avlibs[@]}"} ${rifelibs[@]+"${rifelibs[@]}"} "$obj/libps5lm_kit.a" "$obj/libps5app_compat.a" "$out/gl/libps5lm_gl.a" --end-group \
+    --start-group "${libs[@]}" "${sdlibs[@]}" ${voxlibs[@]+"${voxlibs[@]}"} ${audiolibs[@]+"${audiolibs[@]}"} ${trxlibs[@]+"${trxlibs[@]}"} ${avlibs[@]+"${avlibs[@]}"} ${rifelibs[@]+"${rifelibs[@]}"} "$obj/libps5lm_kit.a" "$obj/libps5app_compat.a" "$out/gl/libps5lm_gl.a" --end-group \
     "$out/stubs/libSceAgc.so" "$out/stubs/libSceAgcDriver.so" \
     ${vk_shims[@]+"${vk_shims[@]}"} \
     "${radv_link_inputs[@]}" \

@@ -1,158 +1,123 @@
 # PS5MM
 
-在一台 PS5 的**原生系统**上（不进 Linux），一个 title 里同时跑起三种本地引擎，
-通过局域网给任何设备当模型服务器。
+[![中文](https://img.shields.io/badge/%E8%AF%AD%E8%A8%80-%E4%B8%AD%E6%96%87-4f8cff)](README.md)
+[![English](https://img.shields.io/badge/lang-English-6b7280)](README.en.md)
 
-- **文字**：llama.cpp（`ggml-vulkan` + RADV），OpenAI / Anthropic 兼容
-- **图像 / 视频**：stable-diffusion.cpp（自带一份 ggml）
-- **语音**：llama.cpp 的 mtmd 跑 TTS
+**一台 PS5 上的全模态 AI 服务器。** 一个 native title、一个进程、一个 12 GB 内存池，
+同时提供文字、图像、视频、语音克隆、三维、插帧六种能力——全部跑在主机自己的 GPU 上
+（Vulkan / RADV，没有 CUDA）。
 
-界面画在电视上（controller 操作），另外每个引擎都开 HTTP 端点给手机 / 电脑用。
+```
+8001  文字    llama.cpp              OpenAI + Anthropic 双方言
+8002  图像    stable-diffusion.cpp   A1111 兼容 + RIFE 插帧
+8003  语音    VoxCPM.cpp             OpenAI TTS + 3 秒参考克隆
+8004  视频    stable-diffusion.cpp   Wan，和 8002 共用 sd 上下文
+8005  三维    trellis.cpp            图生 3D，出带 UV 的 GLB
+8099  控制    /alive /quit
+```
 
-> title id `PPSA99577`。数据在 `/data/PS5MM/`，模型可复用 `/data/PS5SD/models/`（只读）。
+## 五个引擎
 
----
+| # | 引擎 | 端口 | 能力 | 说明 |
+|---|---|---|---|---|
+| 1 | llama.cpp | 8001 | 文字 | OpenAI 与 Anthropic 双方言；放一个 `mmproj*.gguf` 就能看图 |
+| 2 | stable-diffusion.cpp | 8002 | 图像 · 插帧 | SD/SDXL/Flux/Qwen-Image；RIFE 走 `/media/v1/interpolate` |
+| 3 | VoxCPM.cpp | 8003 | 语音 | 0.5B GGUF，单文件，无状态，3 秒参考音频克隆 |
+| 4 | stable-diffusion.cpp | 8004 | 视频 | Wan 系列，和图像互斥切换两套权重 |
+| 5 | trellis.cpp | 8005 | 三维 | TRELLIS.2，一张图出 GLB |
 
-## 端口与槽位
+图像和视频共用同一个 sd.cpp 引擎（互斥切换），所以是 **五个推理引擎、六个能力入口**。
+端口跟槽位走（`text_slot / picture_slot / speech_slot / video_slot`），不是写死的。
 
-**端口跟着槽位走，不跟引擎类型走**：五个槽位 → 8001~8005，谁占哪号由设置决定
-（`settings.json` 的 `text_slot` / `picture_slot` / `speech_slot`，默认 1 / 2 / 3）。
+## 真机实测（PS5 Pro，固件 13.42，内存池 12 GB）
 
-| 槽位 | 默认端口 | 默认装什么 |
+| 能力 | 测试 | 结果 |
 |---|---|---|
-| 1 | 8001 | 文字（llama.cpp） |
-| 2 | 8002 | 图像 / 视频（sd.cpp） |
-| 3 | 8003 | 语音（TTS） |
-| 4 / 5 | 8004 / 8005 | 预留 |
+| 文字 | Qwen3 0.6B Q8_0 | 255.6 t/s 生成 |
+| 图像 | 256×256 / 4 步 | 3.25 秒 |
+| 视频 | 320×192 / 5 帧 / 4 步 | 30.5 秒 |
+| 语音 | VoxCPM 0.5B q8_0，连发 10 句 | 2.6~4.1 秒/句，零退化 |
+| 三维 | 512 / decim=64 | 281.8 秒，10.5 MB GLB |
+| 插帧 | RIFE 256×256 | 92 ms |
 
-常用端点：
+语音是这轮的重点：旧的 Qwen3-TTS 第 2 句起从 5 秒掉到 72~98 秒，必须重启进程才能恢复；
+换成 VoxCPM 后同进程连发 10 句稳定在 3 秒级。eboot 305 MB（含五套引擎）。
 
-```bash
-curl http://<PS5_IP>:8001/health
-curl http://<PS5_IP>:8001/v1/models
-curl -X POST http://<PS5_IP>:8001/v1/chat/completions -H 'Content-Type: application/json' -d '{...}'
-curl -X POST http://<PS5_IP>:8002/sdapi/v1/txt2img -H 'Content-Type: application/json' -d '{...}'
-curl -X POST http://<PS5_IP>:8002/sdapi/v1/txt2vid  -H 'Content-Type: application/json' -d '{...}'
-curl -X POST http://<PS5_IP>:8003/v1/audio/speech     -H 'Content-Type: application/json' -d '{...}'
-```
-
-端点页（电视上按 R1 翻页）会列出全部路由和可直接复制的 curl，端口按当前槽位现算。
-
----
-
-## 构建
-
-只支持 **x86-64 Linux**。依赖链（一次性，慢在 RADV 和 ps5-opengl）：
-
-1. `PS5_Vulkan` 及其分叉（`PS5_Mesa`、`PS5_PayloadSDK`），放在 `.deps/src/`，
-   用它的 `tools/setup-native-dependencies.sh` 装、`tools/build-radv.sh release` 编，
-   再 `make app` 拿 host 工具和 `libc.prx`
-2. **ps5-opengl SDK**：`third_party/ps5-homebrew-ui/tools/fetch-opengl-sdk.sh` 会按 pin 的版本下载并校验 sha256
-3. payload SDK：`scripts/setup-sdk.sh`
-
-然后：
+## 接口
 
 ```bash
-# 依赖就绪后
-PS5_OPENGL_SDK=/path/to/ps5-opengl-sdk bash scripts/build-app.sh
+# 文字（OpenAI 兼容）
+curl http://<IP>:8001/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"local","messages":[{"role":"user","content":"hello"}]}'
+
+# 文字（Anthropic 兼容，可直接接 Claude Code）
+curl http://<IP>:8001/v1/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"local","max_tokens":256,"messages":[{"role":"user","content":"hello"}]}'
+
+# 图像
+curl http://<IP>:8002/sdapi/v1/txt2img \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"a lighthouse at dusk","width":832,"height":480,"steps":20}'
+
+# 视频（5 帧最小示例）
+curl http://<IP>:8004/sdapi/v1/txt2vid \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"a cat walking","width":320,"height":192,"frames":5,"steps":4}' \
+  --output out.avi
+
+# 语音（参考音色：/data/PS5MM/voices/<名字>.wav + 同名 .txt 写台词）
+curl http://<IP>:8003/v1/audio/speech \
+  -H 'Content-Type: application/json' \
+  -d '{"input":"你好，我是主机里的声音","voice":"taiyi.wav"}' \
+  --output hello.wav
+
+# 图生 3D
+curl http://<IP>:8005/v1/images/to3d \
+  -H 'Content-Type: application/json' \
+  -d '{"image":"<base64 png>","resolution":512,"decim":64}' \
+  --output model.glb
+
+# 插帧
+curl http://<IP>:8002/media/v1/interpolate \
+  -H 'Content-Type: application/json' \
+  -d '{"frame0":"<base64>","frame1":"<base64>","timestep":0.5}'
+
+# 卸载模型（换模型、腾内存不用重启）
+curl -X POST http://<IP>:8002/unload
+curl -X POST http://<IP>:8003/unload
 ```
 
-产物在 `build/app-ps5/title/PPSA99577/`，`eboot.bin` 是 SELF（头 `4f153d1d`）。
+## 快速开始
 
-Ubuntu / Debian 上需要的包：
+前提：一台能跑 homebrew 的 PS5（固件 13.x），已注入 TacHen + ShadowMountPlus + ftpsrv（2121）。
 
-```
-build-essential clang llvm lld cmake ninja-build meson glslang-tools
-python3-mako python3-yaml python3-packaging python3-setuptools
-spirv-tools spirv-headers libvulkan-dev imagemagick ffmpeg
-rsync libxml2-dev libelf-dev xxd python3-numpy python3-brotli librsvg2-dev lftp socat
-```
+1. 把 `PPSA99577/` 整个目录传到 `/data/homebrew/`
+2. 触发扫描：`POST http://<IP>:10101/api/v1/scan`，body `{"reset_attempts":true}`
+3. 主屏出现「PS5MM」图标，点开
+4. 模型放进 `/data/PS5MM/models/`（文字）、`/data/PS5MM/sd/`（图像/视频）、
+   `/data/PS5MM/tts/`（语音）、`/data/PS5MM/trellis/`（三维），
+   或在应用的「模型 → 搜索」里直接从 HuggingFace 下载
+5. 语音还要放参考音：`/data/PS5MM/voices/<名字>.wav` + 同名 `.txt`
+6. 设置里调好槽位和模型路径，重开 app
 
-### 不开 PS5 也能看界面
+## 已知限制
 
-`scripts/preview-app-ui.sh` 用 Mesa 的 surfaceless EGL 在 PC 上离屏渲染 dashboard，
-出的 PNG 和电视上是同一套绘制代码、同一批样例数据：
-
-```bash
-bash scripts/preview-app-ui.sh     # -> build/app-preview/*.png
-```
-
-### 字体
-
-界面字体是 **Noto Sans SC**（SIL OFL 1.1，可商用）烘成的 SDF 位图字体：
-
-```bash
-CN_FONT=/path/to/NotoSansSC-VF.ttf bash scripts/bake-fonts-cn.sh
-```
-
-- 源字体必须是 **TrueType 轮廓**（`00010000`），`stb_truetype` 不认 CFF/OTF
-- 正文那份装 **GB2312 全集**（6763 汉字），聊天面板显示模型生成的中文才不会出方框
-- 标题两份装界面字集（由 `scripts/gen-charset.py` 从源码自动抽，**改文案要重跑**）
-
----
-
-## 部署
-
-产物是**一整个 title 文件夹**，用 ShadowMountPlus 挂到主屏（`/data/homebrew/PPSA99577/`）。
-
-⚠ **字体不在 eboot 里**：`main.cpp` 的 `kAssets` 是 `/app0/assets`，字体按文件读。
-换版本时这几样要一起传，只换 `eboot.bin` 界面还是旧字库：
-
-```
-/data/homebrew/PPSA99577/eboot.bin
-/data/homebrew/PPSA99577/assets/fonts/manrope-200.huifont
-/data/homebrew/PPSA99577/assets/fonts/manrope-500.huifont
-/data/homebrew/PPSA99577/assets/fonts/manrope-600.huifont
-```
-
-换完要重新注册（先 `uninstall` 再 `scan`），主屏才会认新 eboot。
-
-关 app 用 `/data/PS5MM/quit`（写个空文件），或电视上 **Options 键连按两下**。
-**别直接 kill 渲染中的 title** —— 会让主机失联。
-
----
-
-## 模型
-
-**仓库里没有任何模型权重。** 全部自行下载，许可归各自发布者：
-
-| 用途 | 我们用的 | 许可 |
-|---|---|---|
-| 文字 | Qwen3 系列 GGUF | Apache-2.0（以模型页为准） |
-| 图像 / 视频 | Wan 2.2 + umt5 + VAE | 见各自模型页，有的限制商用 |
-| 语音 | Qwen3-TTS | 见模型页 |
-
-放到 `/data/PS5MM/models/`（或 `/data/PS5SD/models/` 复用），在电视界面里选。
-
----
+- 11~12 GB 池子装不下三个大模型：文字 + 语音（约 2.1 GB）可以并发，再加图像/视频/三维中的任何一个就该停手
+- 一次只加载一个模型；换模型前先 `POST /unload`
+- 语音输出 16 kHz（VoxCPM 原生）
+- 没有鉴权，别把端口暴露到公网
+- 要越狱主机；越狱不持久，重启后要重新注入
+- 原生 title 占着显示层，PS 键回主屏不可用（Options 连按两下退出）
 
 ## 许可
 
-本项目 **GPL-3.0-or-later**，全文见 [LICENSE](LICENSE)。
+GPL-3.0-or-later。本项目衍生自 [cobanov/PS5LM](https://github.com/cobanov/PS5LM)（GPL-3.0）。
 
-它是 [cobanov/PS5LM](https://github.com/cobanov/PS5LM)（GPL-3.0）的衍生作品，
-沿用同样的许可，并保留原项目的版权头。相对上游 llama.cpp / stable-diffusion.cpp
-的全部改动见 [patches/](patches/)（每个 patch 都核对过与实际代码一致）。
+## 致谢
 
-发布二进制时，`third_party/` 里的完整源码即为对应源码。
-
-### 第三方
-
-| 组件 | 许可 |
-|---|---|
-| [llama.cpp](https://github.com/ggml-org/llama.cpp) | MIT |
-| [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) | MIT |
-| [ps5-homebrew-ui](https://github.com/BlackBearReloaded/ps5-homebrew-ui)（vendored） | GPL-3.0-or-later |
-| Noto Sans SC（界面字体） | OFL 1.1 |
-| DejaVu Sans Mono（日志 / 代码） | Bitstream Vera |
-| cpp-httplib / nlohmann-json | MIT |
-| stb | public domain |
-| [ps5-exporter](https://github.com/Marice/ps5-exporter) v0.2.0（读温度/功耗） | GPL-3.0-or-later |
-
----
-
-## 免责
-
-**这不是索尼官方支持的功能。** 在 PS5 上跑自制 title 依赖社区漏洞，
-可能违反服务条款、可能随系统更新失效、也可能带来你不想承担的风险。
-自行判断，自负后果。不要在联机账号上使用，也不要让主机联网更新（固件一升，漏洞全废）。
+llama.cpp（ggml / llama-server / mtmd）、stable-diffusion.cpp、VoxCPM.cpp（bluryar）与
+VoxCPM（OpenBMB）、trellis.cpp（TRELLIS.2）、ps5-homebrew-ui、Noto Sans SC、
+PS5_Vulkan / PS5_Mesa（RADV）、ps5-payload-sdk、TacHen、ShadowMountPlus、ftpsrv。
+没有这些项目，PS5 上跑推理仍然只是「有人试过」。
